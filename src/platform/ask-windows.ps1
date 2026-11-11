@@ -1,5 +1,5 @@
 # A small always-on-top window that asks one question: Yes, No, or your own words.
-# Every few minutes it plays a sound, flashes in the taskbar and comes back to the front.
+# It plays an alarm when it opens and every few minutes after, flashes in the taskbar and comes back to the front.
 # With no answer it closes after -Minutes. It prints one line: yes | no | text:<words> | none
 param(
   [Parameter(Mandatory = $true)][string]$Question,
@@ -24,6 +24,12 @@ public static class DeputyFlash {
   }
 }
 "@
+
+# A sound file, because the Windows sound scheme is often switched off.
+$alarm = Join-Path $env:WINDIR 'Media/Alarm01.wav'
+function Play-Reminder {
+  if (Test-Path $alarm) { (New-Object Media.SoundPlayer $alarm).Play() } else { [System.Media.SystemSounds]::Exclamation.Play() }
+}
 
 $script:answer = "none"
 $form = New-Object System.Windows.Forms.Form
@@ -76,7 +82,7 @@ $timer.Add_Tick({
   if ($now -ge $deadline) { $script:answer = "none"; $form.Close(); return }
   if ($now -ge $script:nextRemind) {
     $script:nextRemind = $now.AddMinutes($RemindEveryMinutes)
-    [System.Media.SystemSounds]::Exclamation.Play()
+    Play-Reminder
     $form.TopMost = $false; $form.TopMost = $true
     $form.Activate()
     [DeputyFlash]::Window($form.Handle)

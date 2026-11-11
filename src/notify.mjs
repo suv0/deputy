@@ -9,8 +9,10 @@ export function notifyCommand(platform, title, body) {
   const t = String(title).slice(0, 120), b = String(body).slice(0, 400);
   if (platform === "win32") {
     const esc = (s) => s.replace(/'/g, "''");
+    // A chime from a sound file (the Windows sound scheme is often switched off), then the pop-up.
     // 4160 = OK button (0) + information icon (64) + always on top (4096).
-    return ["powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `(New-Object -ComObject WScript.Shell).Popup('${esc(b)}', 60, '${esc(t)}', 4160) | Out-Null`]];
+    const chime = "$f = Join-Path $env:WINDIR 'Media/Windows Notify System Generic.wav'; if (Test-Path $f) { (New-Object Media.SoundPlayer $f).Play() } else { [System.Media.SystemSounds]::Asterisk.Play() }";
+    return ["powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `${chime}; (New-Object -ComObject WScript.Shell).Popup('${esc(b)}', 60, '${esc(t)}', 4160) | Out-Null`]];
   }
   if (platform === "darwin") {
     const esc = (s) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -27,7 +29,8 @@ export function notify(title, body, { platform = process.platform, enabled = tru
   const cmd = notifyCommand(platform, title, body);
   if (!cmd) return;
   try {
-    const child = spawn(cmd[0], cmd[1], { detached: true, stdio: "ignore", windowsHide: true });
+    // Not windowsHide: on Windows it hides the pop-up itself. Detached means no console window.
+    const child = spawn(cmd[0], cmd[1], { detached: true, stdio: "ignore", windowsHide: false });
     child.on("error", () => {});
     child.unref();
   } catch {}

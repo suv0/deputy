@@ -5,6 +5,7 @@
 // Nothing runs, and no model is paid, while the checks find nothing.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ROOT } from "./config.mjs";
 import { loadJobs } from "./jobs.mjs";
 import { isAlive } from "./status.mjs";
 import { listHeld } from "./post.mjs";
@@ -35,6 +36,18 @@ export function nextDue(due, now = Date.now()) {
   return { job: best, waitMs: best === null ? 0 : Math.max(0, due[best] - now) };
 }
 
+/**
+ * The driver's arguments. Claude Code only reads and edits inside its folders, so a run started in
+ * the state folder also gets the PR checkouts, deputy's own files and the docs. Pure.
+ */
+export function driverArgs(config, driver = config.driver) {
+  const args = [...driver.args];
+  const name = String(driver.command).split(/[\/]/).pop().toLowerCase();
+  if (!name.startsWith("claude") || args.includes("--add-dir")) return args;
+  for (const dir of [config.checkouts.root, ROOT, config.context.docsDir].filter(Boolean)) args.push("--add-dir", dir);
+  return args;
+}
+
 /** Start the driver (Claude Code by default) with the job's prompt on stdin. */
 export function startAgentRun({ config, paths, job, items, log }) {
   return new Promise((resolve) => {
@@ -45,7 +58,8 @@ export function startAgentRun({ config, paths, job, items, log }) {
     writeFileSync(join(paths.runs, `run-${stamp}-${job.name}.prompt.md`), prompt);
     log(`${job.name}: run started for ${items.map(job.label).join(", ")} -> ${runLog}`);
     const driver = job.driver ?? config.driver;
-    const child = spawnTool(driver.command, driver.args, { cwd: paths.state, env: { ...process.env, DEPUTY_RUN: stamp, DEPUTY_JOB: job.name } });
+    mkdirSync(config.checkouts.root, { recursive: true });
+    const child = spawnTool(driver.command, driverArgs(config, driver), { cwd: paths.state, env: { ...process.env, DEPUTY_RUN: stamp, DEPUTY_JOB: job.name } });
     child.stdin.end(prompt);
     let out = "";
     child.stdout.on("data", (d) => { out += d; appendFileSync(runLog, d); });

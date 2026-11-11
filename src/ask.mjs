@@ -41,6 +41,7 @@ export function askCommand(platform, question, { minutes, remindEveryMinutes }) 
 export async function askUser(question, { platform = process.platform, minutes = 10, remindEveryMinutes = 2 } = {}) {
   const cmd = askCommand(platform, question, { minutes, remindEveryMinutes });
   if (!cmd) return { answer: "none" };
-  const r = await run(cmd[0], cmd[1], { timeoutMs: (minutes + 2) * 60_000 });
+  // windowsHide would hide the answer window itself.
+  const r = await run(cmd[0], cmd[1], { timeoutMs: (minutes + 2) * 60_000, windowsHide: false });
   return parseAnswer(r.stdout);
 }

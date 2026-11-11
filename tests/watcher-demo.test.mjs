@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULTS, merge, paths as pathsOf } from "../src/config.mjs";
 import { demo, fakeGh } from "../src/demo.mjs";
-import { gist, lockHeld, nextDue, watch } from "../src/watcher.mjs";
+import { driverArgs, gist, lockHeld, nextDue, watch } from "../src/watcher.mjs";
+import { ROOT } from "../src/config.mjs";
 import { readJson } from "../src/util.mjs";
 
 function setup() {
@@ -110,4 +111,13 @@ test("the demo runs the whole review: posted in auto mode, held in draft mode", 
   const draft = await demo({ fast: true, popup: false, draft: true, out: quiet });
   assert.equal(draft.outcome, "held");
   assert.equal(draft.posted.length, 0);
+});
+
+test("a Claude driver gets the checkouts, deputy and the docs as extra folders; others are left alone", () => {
+  const { config } = setup();
+  const c = merge(config, { context: { docsDir: "/srv/docs" } });
+  const args = driverArgs(c);
+  assert.deepEqual(args.slice(-6), ["--add-dir", c.checkouts.root, "--add-dir", ROOT, "--add-dir", "/srv/docs"]);
+  assert.deepEqual(driverArgs(c, { command: "my-agent", args: ["-p"] }), ["-p"]);
+  assert.deepEqual(driverArgs(c, { command: "claude", args: ["-p", "--add-dir", "/x"] }), ["-p", "--add-dir", "/x"], "your own --add-dir wins");
 });

@@ -224,8 +224,8 @@ deputy: STUCK (pr-review last checked 20m ago)
 ```
 
 **Pop-ups** come when a run finishes (with the last lines of its own summary), when a review is held for you, and
-when a check fails three times in a row. Windows shows an on-top pop-up that closes itself after a minute; macOS uses
-Notification Center; Linux uses `notify-send`.
+when a check fails three times in a row. Windows plays a chime and shows an on-top pop-up that closes itself after a
+minute; macOS uses Notification Center; Linux uses `notify-send`.
 
 **The answer window** is for the rare question a run can't settle from the rules, the code and the docs:
 
@@ -234,8 +234,9 @@ deputy ask "acme/shop #42: two docs disagree on the refund limit. Follow the new
 # {"answer":"yes"} | {"answer":"no"} | {"answer":"text","text":"…"} | {"answer":"none"}
 ```
 
-On Windows it stays on top, beeps and flashes every 2 minutes, and closes after 10 with `none`, so the run takes the
-safer choice. macOS uses a dialog that gives up after the same time; Linux uses `zenity`.
+On Windows it stays on top, plays an alarm when it opens, sounds and flashes again every 2 minutes, and closes after
+10 with `none`, so the run takes the safer choice. Sounds come from Windows' own sound files, so they play even with
+the system sound scheme switched off. macOS uses a dialog that gives up after the same time; Linux uses `zenity`.
 
 ## 🛡️ Safety
 

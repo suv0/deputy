@@ -77,7 +77,8 @@ const commands = {
 
   async doctor() {
     const { config } = load({ strict: false });
-    const ok = (good, text) => console.log(`${good ? "✔" : "✘"} ${text}`);
+    let bad = 0;
+    const ok = (good, text) => { if (!good) bad++; console.log(`${good ? "✔" : "✘"} ${text}`); };
     ok(Boolean(config.file), `config: ${config.file ?? "none found (deputy init)"}`);
     for (const p of checkConfig(config)) ok(false, p);
     ok(Number(process.versions.node.split(".")[0]) >= 20, `Node ${process.versions.node} (20 or newer)`);
@@ -101,6 +102,7 @@ const commands = {
       if (p) ok(existsSync(p), `${k}: ${p}`);
     }
     console.log(`posting: ${config.posting}${config.posting === "draft" ? " (reviews are held for you; set \"auto\" to post)" : " (reviews that pass every check are POSTED)"}`);
+    if (bad) process.exitCode = 1;
   },
 
   async demo() {
@@ -181,7 +183,7 @@ const commands = {
     if (!prompt?.trim()) { console.error("deputy model: pass --prompt or --prompt-file"); process.exit(2); }
     const r = await askModel({
       config, paths, prompt, tier: args.tier, tool: args.tool, model: args.model, effort: args.effort,
-      cwd: resolve(args.cwd ?? "."), mode: args.mode ?? "read", label: args.label ?? null,
+      cwd: resolve(typeof args.cwd === "string" ? args.cwd : "."), mode: args.mode ?? "read", label: args.label ?? null,
       timeoutSeconds: Number(args.timeout ?? 900), maxTurns: Number(args["max-turns"] ?? 60),
     });
     if (!r.ok) {
@@ -229,7 +231,8 @@ const commands = {
     if (!h) { console.error(`No held review ${k}. Run deputy held to list them.`); process.exit(1); }
     if (sub === "drop") { dropHeld(h); console.log(`Dropped ${h.repo} #${h.number}; nothing posted.`); return; }
     if (sub !== "post" && sub !== "soften") { console.error(`Unknown: deputy held ${sub}`); process.exit(2); }
-    // Posting a held review is a person's decision, so it needs a person at a terminal.
+    // Posting a held review is a person's decision, so it needs a person at a terminal, never a run.
+    if (process.env.DEPUTY_RUN) { console.error("deputy held post/soften can't run inside an agent run."); process.exit(2); }
     if (!process.stdin.isTTY && !args.yes) { console.error("deputy held post/soften runs from a terminal (or add --yes)."); process.exit(2); }
     const draft = structuredClone(h.draft);
     if (sub === "soften" && draft.event === "REQUEST_CHANGES") { draft.event = "APPROVE"; draft.body = SOFTEN_PREFIX + draft.body; }

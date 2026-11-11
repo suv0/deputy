@@ -42,25 +42,29 @@ export function quoteWin(arg) {
   return `"${s.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, "$1$1")}"`;
 }
 
-/** Spawn a CLI by name, found on PATH, with the same behaviour on Windows, macOS and Linux. */
+/**
+ * Spawn a CLI by name, found on PATH, with the same behaviour on Windows, macOS and Linux.
+ * Windows hides the child's console by default; pass windowsHide: false for a child that shows a
+ * window of its own, or that window is hidden too.
+ */
 export function spawnTool(command, args = [], options = {}) {
   // A named .exe (powershell.exe, node.exe) starts directly, which keeps its arguments exact.
   if (process.platform === "win32" && !/\.exe$/i.test(command)) {
     const line = [quoteWin(command), ...args.map(quoteWin)].join(" ");
-    return spawn(line, [], { ...options, shell: true, windowsHide: true });
+    return spawn(line, [], { windowsHide: true, ...options, shell: true });
   }
-  return spawn(command, args, { ...options, windowsHide: true });
+  return spawn(command, args, { windowsHide: true, ...options });
 }
 
 /**
  * Run a CLI to the end. Resolves with { code, stdout, stderr, timedOut }; never rejects, so a
  * missing tool reads as an ordinary failure the caller can fall through on.
  */
-export function run(command, args = [], { input, cwd, env, timeoutMs = 0 } = {}) {
+export function run(command, args = [], { input, cwd, env, timeoutMs = 0, windowsHide = true } = {}) {
   return new Promise((done) => {
     let child;
     try {
-      child = spawnTool(command, args, { cwd, env: env ?? process.env });
+      child = spawnTool(command, args, { cwd, env: env ?? process.env, windowsHide });
     } catch (error) {
       done({ code: -1, stdout: "", stderr: String(error), timedOut: false });
       return;
