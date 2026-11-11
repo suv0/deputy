@@ -1,0 +1,22 @@
+{
+  "_comment": "An example `models` block that mixes tools: cheap models do the legwork, a strong one reviews, a different vendor challenges. Paste it over `models` in your config and use the model names your own accounts offer. Each tier is tried in order; a tool that reports it is out of limit or credit is skipped until its reset.",
+  "models": {
+    "tools": { "command-code": "command-code", "codex": "codex", "opencode": "opencode", "claude": "claude" },
+    "tiers": {
+      "legwork": [
+        { "tool": "command-code", "model": "deepseek/deepseek-v4.1-flash" },
+        { "tool": "codex", "model": "gpt-6-luna", "effort": "medium" },
+        { "tool": "claude", "model": "haiku" }
+      ],
+      "review": [
+        { "tool": "codex", "model": "gpt-6.1-sol", "effort": "high" },
+        { "tool": "claude", "model": "sonnet" },
+        { "tool": "opencode", "model": "openrouter/moonshotai/kimi-k3.1-pro" }
+      ],
+      "challenge": [
+        { "tool": "codex", "model": "gpt-6-astra", "effort": "xhigh" },
+        { "tool": "claude", "model": "opus" }
+      ]
+    }
+  }
+}

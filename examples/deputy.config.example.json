@@ -1,0 +1,53 @@
+{
+  "jobs": [
+    { "name": "pr-review", "builtin": "pr-review", "everyMinutes": 5 }
+  ],
+
+  "github": {
+    "login": "your-github-login",
+    "teams": []
+  },
+  "repos": ["your-org/your-app"],
+  "maxPrsPerRun": 4,
+
+  "posting": "draft",
+  "skipApprovedByOthers": true,
+  "verdict": {
+    "approveEvent": "APPROVE",
+    "requestChanges": "hold"
+  },
+
+  "important": {
+    "paths": ["**/migrations/**", "**/auth/**", "**/payments/**", "**/billing/**", ".github/workflows/**", "**/*.tf"],
+    "topics": ["money", "payments", "billing", "login", "sessions", "permissions", "secrets", "security", "personal data", "database migrations", "deploys"]
+  },
+
+  "context": {
+    "docsDir": "",
+    "refreshDocs": false,
+    "teamFile": "",
+    "voiceFile": "",
+    "checklist": "checklist/review-checklist.md",
+    "reviewerRules": "prompts/reviewer-rules.md",
+    "extraInstructions": ""
+  },
+
+  "checkouts": { "root": "~/deputy-checkouts", "clones": {} },
+
+  "driver": {
+    "command": "claude",
+    "args": ["-p", "--output-format", "text", "--allowedTools", "Bash", "Read", "Write", "Edit", "Glob", "Grep"]
+  },
+
+  "models": {
+    "tools": { "command-code": "command-code", "codex": "codex", "opencode": "opencode", "claude": "claude" },
+    "tiers": {
+      "legwork": [{ "tool": "claude", "model": "haiku" }],
+      "review": [{ "tool": "claude", "model": "sonnet" }],
+      "challenge": [{ "tool": "claude", "model": "opus" }]
+    }
+  },
+
+  "notify": true,
+  "ask": { "minutes": 10, "remindEveryMinutes": 2 }
+}

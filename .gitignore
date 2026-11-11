@@ -1,0 +1,4 @@
+node_modules/
+deputy.config.json
+*.log
+.deputy/

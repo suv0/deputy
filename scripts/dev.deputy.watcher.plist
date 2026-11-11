@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- macOS, launchd agent. Replace YOU and the node path (`which node`), then:
+       cp scripts/dev.deputy.watcher.plist ~/Library/LaunchAgents/
+       launchctl load ~/Library/LaunchAgents/dev.deputy.watcher.plist
+     Stop it with `launchctl unload` on the same file. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>dev.deputy.watcher</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/YOU/deputy/bin/deputy.mjs</string>
+    <string>start</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/tmp/deputy.out.log</string>
+  <key>StandardErrorPath</key><string>/tmp/deputy.err.log</string>
+</dict>
+</plist>

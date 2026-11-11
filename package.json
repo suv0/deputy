@@ -1,0 +1,32 @@
+{
+  "name": "deputy-review",
+  "version": "0.1.0",
+  "description": "A stand-in reviewer: when someone requests your review on GitHub, deputy reviews the PR with the coding agents you already use, checks every claim, and drafts or posts the review under your rules.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "deputy": "bin/deputy.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "prompts",
+    "checklist",
+    "examples",
+    "scripts"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "demo": "node bin/deputy.mjs demo",
+    "start": "node bin/deputy.mjs start",
+    "status": "node bin/deputy.mjs status"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suv0/deputy.git"
+  },
+  "keywords": ["code-review", "pull-request", "github", "claude-code", "codex", "agents", "cli"]
+}

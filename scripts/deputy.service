@@ -1,0 +1,17 @@
+# Linux, systemd user service. Edit the two paths, then:
+#   mkdir -p ~/.config/systemd/user && cp scripts/deputy.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now deputy
+#   journalctl --user -u deputy -f
+# Pop-ups need notify-send (libnotify) and a desktop session; the answer window needs zenity.
+[Unit]
+Description=deputy PR review watcher
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/node %h/deputy/bin/deputy.mjs start
+WorkingDirectory=%h
+Restart=on-failure
+RestartSec=300
+
+[Install]
+WantedBy=default.target
