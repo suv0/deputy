@@ -113,11 +113,12 @@ test("the demo runs the whole review: posted in auto mode, held in draft mode", 
   assert.equal(draft.posted.length, 0);
 });
 
-test("a Claude driver gets the checkouts, deputy and the docs as extra folders; others are left alone", () => {
+test("a Claude driver gets the checkouts, deputy, the docs and the team file's folder; others are left alone", () => {
   const { config } = setup();
-  const c = merge(config, { context: { docsDir: "/srv/docs" } });
+  const c = merge(config, { context: { docsDir: "/srv/docs", teamFile: "/srv/team/team.md", voiceFile: "/srv/docs/voice.md" } });
   const args = driverArgs(c);
-  assert.deepEqual(args.slice(-6), ["--add-dir", c.checkouts.root, "--add-dir", ROOT, "--add-dir", "/srv/docs"]);
+  const dirs = args.filter((a, i) => args[i - 1] === "--add-dir");
+  assert.deepEqual(dirs, [c.checkouts.root, ROOT, "/srv/docs", "/srv/team"], "folders already covered are not repeated");
   assert.deepEqual(driverArgs(c, { command: "my-agent", args: ["-p"] }), ["-p"]);
   assert.deepEqual(driverArgs(c, { command: "claude", args: ["-p", "--add-dir", "/x"] }), ["-p", "--add-dir", "/x"], "your own --add-dir wins");
 });

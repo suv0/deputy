@@ -25,8 +25,10 @@ export function runDirName(repo, number) {
 /** Jobs whose last check is more than two cycles old (and five minutes) while nothing runs. Pure. */
 export function stuckJobs(s, now = Date.now()) {
   if (s.state === "running") return [];
-  return Object.entries(s.jobs ?? {}).filter(([, j]) => {
-    const since = j.checkedAt ?? s.startedAt;
+  return Object.entries(s.jobs ?? {}).filter(([name, j]) => {
+    // A long run of this job is not a stuck check: count from whichever came last.
+    const runAt = s.lastRun?.job === name ? s.lastRun.at : null;
+    const since = [j.checkedAt ?? s.startedAt, runAt].filter(Boolean).sort().at(-1);
     return since && now - Date.parse(since) > (j.everyMinutes * 2 + 5) * 60_000;
   }).map(([name, j]) => ({ name, checkedAt: j.checkedAt }));
 }

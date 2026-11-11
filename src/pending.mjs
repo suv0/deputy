@@ -65,3 +65,16 @@ export async function findPending({ config, gh, done, job = "pr-review" }) {
   }
   return out;
 }
+
+/** One PR as the PR job's item, whoever it requests: for `deputy review <owner/repo> <n>`. */
+export async function describePr({ config, gh, repo, number }) {
+  const pr = await gh.json(["pr", "view", String(number), "-R", repo, "--json", PR_FIELDS]);
+  if (pr.state !== "OPEN") throw new Error(`${repo}#${number} is ${pr.state.toLowerCase()}`);
+  const reviews = (await gh.json(["api", `repos/${repo}/pulls/${number}/reviews`, "--paginate", "--slurp"])).flat();
+  return {
+    repo, number: pr.number, title: pr.title, author: pr.author?.login ?? null, url: pr.url,
+    head: pr.headRefOid, base: pr.baseRefName, size: `+${pr.additions}/-${pr.deletions}`,
+    ...summarizeReviews(reviews, config.github.login, pr.headRefOid),
+    byHand: true,
+  };
+}

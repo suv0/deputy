@@ -59,3 +59,8 @@ test("statusReport lists each job, and each PR's stage from its run folder", () 
   assert.ok(lines.includes("  acme/shop #42: review drafted, checking claims in the code"));
   assert.ok(lines.includes("  acme/shop #43: setting up"));
 });
+
+test("a job that just finished a long run is not stuck", () => {
+  const s = { ...base, jobs: { "pr-review": job({ checkedAt: "2026-11-11T11:30:00Z" }) }, lastRun: { job: "pr-review", at: "2026-11-11T11:59:00Z", items: [], code: 0 } };
+  assert.deepEqual(stuckJobs(s, now), []);
+});

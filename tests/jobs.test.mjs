@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULTS, loadConfig, merge, paths as pathsOf } from "../src/config.mjs";
 import { checkConfig, jobProblems, loadJobs, selectFresh } from "../src/jobs.mjs";
-import { record } from "../src/checkout.mjs";
+import { formatGithubFacts, record } from "../src/checkout.mjs";
 import { readJson } from "../src/util.mjs";
 
 test("selectFresh drops items handled at the same version, and keeps them when it changes", () => {
@@ -77,4 +77,21 @@ test("a check that fails or prints junk is an error, not an empty list", async (
 test("disabled jobs don't load", () => {
   const c = merge(DEFAULTS, { github: { login: "you" }, repos: ["a/b"], jobs: [{ name: "pr-review", builtin: "pr-review", enabled: false }] });
   assert.equal(loadJobs(c).length, 0);
+});
+
+test("formatGithubFacts writes what GitHub knows, and says unknown where it couldn't read", () => {
+  const pr = { ok: true, value: {
+    title: "Count once after commit", url: "u", author: { login: "maya" }, baseRefName: "main", headRefOid: "abc",
+    body: "Closes the counter bug.", labels: [{ name: "bug" }], closingIssuesReferences: [{ number: 7 }],
+    files: [{ path: "src/a.js", additions: 3, deletions: 1 }],
+    reviews: [{ author: { login: "leo" }, state: "COMMENTED", commit: { oid: "abcdef1234" }, body: "One question." }],
+    comments: [], statusCheckRollup: [{ name: "tests", conclusion: "FAILURE" }],
+  } };
+  const md = formatGithubFacts({ repo: "acme/shop", n: 4, pr, inline: { ok: false, error: "HTTP 502" },
+    open: { ok: true, value: [{ number: 5, title: "Other", author: { login: "sam" }, files: [{ path: "src/a.js" }] }, { number: 4, files: [{ path: "src/a.js" }] }] },
+    logs: [{ name: "tests", runId: "9", tail: "Error: boom" }] });
+  for (const bit of ["## Count once after commit", "Closes: #7", "- src/a.js (+3/-1)", "leo COMMENTED at abcdef123: One question.", "unknown (HTTP 502)", "- tests: FAILURE", "Error: boom", "- #5 Other (sam): src/a.js"])
+    assert.ok(md.includes(bit), bit);
+  assert.ok(!md.includes("#4 "), "the PR itself is not its own overlap");
+  assert.match(formatGithubFacts({ repo: "a/b", n: 1, pr: { ok: false, error: "gone" } }), /PR: unknown \(gone\)/);
 });

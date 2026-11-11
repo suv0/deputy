@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { checkAnchors } from "./anchors.mjs";
-import { applyVerdictPolicy, checkShape, verdictLabel } from "./verdict.mjs";
+import { alertsIn, applyVerdictPolicy, checkShape, verdictLabel } from "./verdict.mjs";
 import { readJson, run, writeJson } from "./util.mjs";
 
 export async function docsTip(docsDir) {
@@ -18,7 +18,7 @@ export async function docsTip(docsDir) {
 }
 
 /** Every check that doesn't change anything. Returns { problems, notes, policy, files }. */
-export async function checkReview({ payload, gh, config, getDocsTip = docsTip }) {
+export async function checkReview({ payload, gh, config, runDir = null, getDocsTip = docsTip }) {
   const problems = checkShape(payload);
   const notes = [];
   if (problems.length) return { problems, notes, policy: null };
@@ -43,9 +43,39 @@ export async function checkReview({ payload, gh, config, getDocsTip = docsTip })
     for (const r of replies) if (!top.has(r.in_reply_to)) problems.push(`reply target ${r.in_reply_to} is not a top-level comment on this PR`);
   }
 
+  // Important work needs the challenge before it leaves, whatever the run decided.
+  const why = importantBecause({ files, payload, important: config.important });
+  if (why && runDir && config.requireChallenge !== false && !existsSync(join(runDir, "challenge.md")))
+    problems.push(`important work (${why}): run the challenge tier into ${join(runDir, "challenge.md")} before posting`);
+
   const policy = applyVerdictPolicy(payload, config.verdict);
   notes.push(...policy.notes);
   return { problems, notes, policy };
+}
+
+/** A glob like `**\/migrations/**` or `*.tf` as a regular expression over a forward-slash path. Pure. */
+export function globToRegExp(glob) {
+  let re = "";
+  for (let i = 0; i < glob.length; i++) {
+    const ch = glob[i];
+    if (ch === "*" && glob[i + 1] === "*") {
+      const slash = glob[i + 2] === "/";
+      re += slash ? "(?:.*/)?" : ".*";
+      i += slash ? 2 : 1;
+    } else if (ch === "*") re += "[^/]*";
+    else if (ch === "?") re += "[^/]";
+    else re += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  }
+  return new RegExp(`^${re}$`);
+}
+
+/** Why a review counts as important work, or null. Pure. */
+export function importantBecause({ files = [], payload, important = {} }) {
+  if (payload.event === "REQUEST_CHANGES") return "it requests changes";
+  if (alertsIn(payload.body).caution) return "it holds the merge";
+  const globs = (important.paths ?? []).map(globToRegExp);
+  const hit = files.map((f) => f.filename).find((f) => globs.some((g) => g.test(f)));
+  return hit ? `it changes ${hit}` : null;
 }
 
 export function heldName(payload) {
@@ -83,7 +113,7 @@ export async function submitReview({ payload, gh, workDir }) {
 export async function postReview({ file, config, paths, gh, doPost = false, force = false, getDocsTip }) {
   const payload = JSON.parse(readFileSync(file, "utf8"));
   const lines = [];
-  const { problems, notes, policy } = await checkReview({ payload, gh, config, getDocsTip });
+  const { problems, notes, policy } = await checkReview({ payload, gh, config, getDocsTip, runDir: force ? null : dirname(file) });
   lines.push(`${payload._repo ?? "?"} PR ${payload._number ?? "?"}: ${payload.event} with ${payload.comments?.length ?? 0} inline comments`);
   for (const n of notes) lines.push(`  note: ${n}`);
   if (problems.length) {

@@ -86,6 +86,7 @@ Set `github.login` and `repos` in that file, then:
 ```bash
 deputy doctor            # checks gh, the agent CLIs and the config
 deputy once              # one check; one run if a review waits on you
+deputy review acme/shop 42   # or try it on any open PR
 deputy held              # read what it drafted
 ```
 
@@ -313,6 +314,7 @@ then `systemctl --user enable --now deputy`.
 | `deputy jobs` / `check <job>` | List jobs; run one check and print what it finds |
 | `deputy held [post\|soften\|drop <k>]` | Reviews waiting for you |
 | `deputy pending` | The PRs that wait on your review, as JSON |
+| `deputy review <owner/repo> <n>` | Review one PR now, whoever it requests; posting rules still apply |
 | `deputy prepare` / `cleanup <owner/repo> <n>` | A run's fresh PR checkout and run folder |
 | `deputy model --tier <t> --prompt-file <f>` | One task on the next available model |
 | `deputy post <review.json> [--post]` | Check a review; then post or hold it |

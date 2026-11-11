@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { DEPUTY_BIN, ROOT, validate } from "./config.mjs";
+import { cleanup } from "./checkout.mjs";
 import { findPending } from "./pending.mjs";
 import { buildPrompt, renderTemplate } from "./prompt.mjs";
 import { run } from "./util.mjs";
@@ -72,6 +73,10 @@ function prReviewJob(def, config) {
     prompt: (items) => buildPrompt(config, items, def.name),
     label: (item) => `${item.repo.split("/")[1]} #${item.number}`,
     doneVerb: "Reviewed",
+    // A backstop: the run cleans up its checkouts, but a shell left inside one can stop it.
+    async afterRun({ items }) {
+      for (const i of items) await cleanup({ config, repo: i.repo, n: i.number }).catch(() => {});
+    },
   };
 }
 

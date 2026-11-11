@@ -4,13 +4,14 @@ import { existsSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULTS, merge, paths as pathsOf } from "../src/config.mjs";
-import { listHeld, postReview } from "../src/post.mjs";
+import { globToRegExp, importantBecause, listHeld, postReview } from "../src/post.mjs";
 import { fakeGh } from "../src/demo.mjs";
 
 const HEAD = "4f1c2a9e8b7d6c5f4e3d2c1b0a9f8e7d6c5b4a39";
 
-function setup(over = {}, payloadOver = {}) {
+function setup(over = {}, payloadOver = {}, { challenged = true } = {}) {
   const state = mkdtempSync(join(tmpdir(), "deputy-post-"));
+  if (challenged) writeFileSync(join(state, "challenge.md"), "could not disprove");
   const config = merge(DEFAULTS, { github: { login: "you" }, repos: ["acme/shop"], stateDir: state, ...over });
   const paths = pathsOf(config);
   const file = join(state, "review-42.json");
@@ -91,4 +92,32 @@ test("the docs tip is checked when refreshDocs is on", async () => {
   const r = await postReview({ ...s, doPost: true, getDocsTip: async () => "def5678" });
   assert.equal(r.outcome, "invalid");
   assert.ok(r.lines.some((l) => l.includes("docs moved to def5678")));
+});
+
+test("important work can't be posted or held before the challenge has run", async () => {
+  const s = setup({ posting: "auto" }, { body: "> [!CAUTION]\n> **Do not merge until x.**" }, { challenged: false });
+  const r = await postReview({ ...s, doPost: true });
+  assert.equal(r.outcome, "invalid");
+  assert.ok(r.lines.some((l) => l.includes("important work (it holds the merge)")));
+  const plain = setup({ posting: "auto" }, {}, { challenged: false });
+  assert.equal((await postReview({ ...plain, doPost: true })).outcome, "posted", "ordinary work needs no challenge");
+});
+
+test("importantBecause: verdict, alert or an important path", () => {
+  const important = { paths: ["**/migrations/**", "*.tf", ".github/workflows/**"] };
+  const ok = { event: "APPROVE", body: "fine" };
+  assert.equal(importantBecause({ files: [{ filename: "src/a.js" }], payload: ok, important }), null);
+  assert.equal(importantBecause({ files: [{ filename: "db/migrations/001.sql" }], payload: ok, important }), "it changes db/migrations/001.sql");
+  assert.equal(importantBecause({ files: [{ filename: "main.tf" }], payload: ok, important }), "it changes main.tf");
+  assert.equal(importantBecause({ files: [{ filename: "infra/main.tf" }], payload: ok, important }), null, "*.tf is the top folder only");
+  assert.equal(importantBecause({ files: [], payload: { event: "REQUEST_CHANGES", body: "x" }, important }), "it requests changes");
+});
+
+test("globToRegExp", () => {
+  assert.ok(globToRegExp("**/migrations/**").test("migrations/1.sql"));
+  assert.ok(globToRegExp("**/migrations/**").test("a/b/migrations/1.sql"));
+  assert.ok(!globToRegExp("**/migrations/**").test("a/migrationsx/1.sql"));
+  assert.ok(globToRegExp("**/Dockerfile").test("Dockerfile"));
+  assert.ok(globToRegExp("src/?.js").test("src/a.js"));
+  assert.ok(!globToRegExp("src/*.js").test("src/a/b.js"));
 });

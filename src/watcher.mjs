@@ -4,7 +4,7 @@
 // usual time, so a broken run can't repeat in a tight loop. One run at a time, across all jobs.
 // Nothing runs, and no model is paid, while the checks find nothing.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { ROOT } from "./config.mjs";
 import { loadJobs } from "./jobs.mjs";
 import { isAlive } from "./status.mjs";
@@ -38,13 +38,17 @@ export function nextDue(due, now = Date.now()) {
 
 /**
  * The driver's arguments. Claude Code only reads and edits inside its folders, so a run started in
- * the state folder also gets the PR checkouts, deputy's own files and the docs. Pure.
+ * the state folder also gets the PR checkouts, deputy's own files, the docs and the team and voice
+ * files' folders. Pure.
  */
 export function driverArgs(config, driver = config.driver) {
   const args = [...driver.args];
   const name = String(driver.command).split(/[\/]/).pop().toLowerCase();
   if (!name.startsWith("claude") || args.includes("--add-dir")) return args;
-  for (const dir of [config.checkouts.root, ROOT, config.context.docsDir].filter(Boolean)) args.push("--add-dir", dir);
+  const files = [config.context.teamFile, config.context.voiceFile, config.context.checklist, config.context.reviewerRules].filter(Boolean).map((f) => dirname(f));
+  const dirs = [config.checkouts.root, ROOT, config.context.docsDir, ...files].filter(Boolean);
+  const inside = (d, root) => { const a = resolve(d).toLowerCase(), b = resolve(root).toLowerCase(); return a === b || a.startsWith(b + sep); };
+  for (const dir of dirs.filter((d, i) => !dirs.slice(0, i).some((e) => inside(d, e)))) args.push("--add-dir", dir);
   return args;
 }
 
@@ -117,6 +121,7 @@ export async function watch({ config, paths, gh, notify, jobs = loadJobs(config)
       save({ state: "running", running: { job: name, items } });
       const r = await runAgent({ config, paths, job, items: batch, log }).finally(() => rmSync(paths.lock, { force: true }));
       log(`${name}: run finished with code ${r.code}`);
+      if (job.afterRun) await job.afterRun({ items: batch }).catch((e) => log(`${name}: after-run step failed: ${e.message ?? e}`));
       save({ state: "idle", running: null, lastRun: { job: name, at: new Date().toISOString(), items, code: r.code, log: r.log } });
       const label = items.map((i) => i.label).join(", ");
       notify(r.code === 0 ? `${job.doneVerb ?? "Done"}: ${label}` : `${name} run failed (exit ${r.code})`, gist(r.out) || r.log);

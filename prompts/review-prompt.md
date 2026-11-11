@@ -17,32 +17,32 @@ Take them oldest number first. The watcher starts another run for any it didn't 
 ## 2. Skip what doesn't need a review
 
 For each PR:
-- Right before you start on it, check it again: `gh pr view <n> -R <repo> --json state,mergedAt,isDraft,reviewRequests,headRefOid`. Go on only if it is OPEN, not merged, not a draft, and {{LOGIN}} is still requested. Otherwise skip it and don't record it.
+- Right before you start on it, check it again: `gh pr view <n> -R <repo> --json state,mergedAt,isDraft,reviewRequests,headRefOid`. Go on only if it is OPEN, not merged, not a draft, and {{LOGIN}} is still requested. Otherwise skip it and don't record it. A PR marked `"byHand": true` was asked for by {{LOGIN}} directly: review it whoever it requests, and don't skip it for others' approvals.
 {{#SKIP_APPROVED}}- If `approvedAtHeadBy` is not empty and `reReview` is false, someone else already approved this head. Record it (step 6) as "skipped, approved by <who>" and move on.
 {{/SKIP_APPROVED}}
 
 ## 3. Set up
 
 - Note the start time: `date -u +%FT%TZ`.
-- Run `deputy prepare <repo> <n>`. It makes a fresh detached checkout of the PR head and a fresh run folder, and prints JSON with `checkout`, `runDir`, `head`, `base` and `docsCommit`. Call the run folder R. Work only inside these two folders; never touch any other checkout.
+- Run `deputy prepare <repo> <n>`. It makes a fresh detached checkout of the PR head and a fresh run folder, and prints JSON with `checkout`, `runDir`, `head`, `base`, `githubFacts` and `docsCommit`. `githubFacts` is a file deputy already filled from GitHub: the description, reviews, conversation, inline threads with their ids, checks, the failing logs, and other open PRs touching the same files. The outside models usually have no network, so they read GitHub facts from that file, never from `gh`. Call the run folder R. Work only inside these two folders; never touch any other checkout.
 
 ## 4. Have the outside models review it
 
 `deputy model` runs a task on the next available model of a tier and falls back on its own when a tool is out of limit. Every run gets `--label "<repo>#<n> <what>"` and `--cwd <checkout>`.
 
-1. **Facts (tier `legwork`).** Write R/facts-brief.md asking only to collect, with no opinions: the PR description and every existing review thread (`gh pr view <n> -R <repo> --comments`, `gh api repos/<repo>/pulls/<n>/comments`); `git diff --stat origin/<base>...HEAD` and the full diff of non-generated files; each CI check, with the failing step's error lines (`gh pr checks <n> -R <repo>`, `gh run view <id> --log-failed`); other open PRs touching the same files; {{#DOCS}}the sections in {{DOCS}} that govern the changed area (file:line and a short quote); {{/DOCS}}and for each changed export, route, event, setting or table, the places on the base branch that use it (file:line). Plain sections, exact paths and line numbers, "unknown" where it can't tell. Run `deputy model --tier legwork --label "<repo>#<n> facts" --cwd <checkout> --timeout 900 --prompt-file R/facts-brief.md --out R/facts.md`.
+1. **Facts (tier `legwork`).** Write R/facts-brief.md asking only to collect, with no opinions, starting from the GitHub facts file (give its full path): `git diff --stat origin/<base>...HEAD` and the full diff of non-generated files; for each failing check in the facts file, the code its error points at; {{#DOCS}}the sections in {{DOCS}} that govern the changed area (file:line and a short quote); {{/DOCS}}and for each changed export, route, event, setting or table, the places on the base branch that use it (file:line). Plain sections, exact paths and line numbers, "unknown" where it can't tell. Run `deputy model --tier legwork --label "<repo>#<n> facts" --cwd <checkout> --timeout 900 --prompt-file R/facts-brief.md --out R/facts.md`.
 
 2. **The review (tier `review`).** Write R/brief.md:
    - "Goal: review pull request <n> of <repo> and draft the review that {{LOGIN}} will post."
    - "Where: this folder is a detached checkout of the PR head <full sha>. Compare with its base: `git diff origin/<base>...HEAD`."
-   - "Facts already collected by a helper are in <full path of R/facts.md>. Use them as a starting point, check any you rely on, and look further where they are thin."
+   - "Facts already collected are in <full path of R/facts.md> and, from GitHub, <full path of the githubFacts file>. Use them as a starting point, check any you rely on in the code, and look further where they are thin. You have no network: don't call gh."
    - One focus paragraph of your own, from the PR title and description: what could break, and whether it touches {{IMPORTANT_TOPICS}}, which need the closest look.
    - For a re-review (`reReview` true): "This is a re-review. {{LOGIN}} last reviewed at <myLastReviewedCommit>. Review `git diff <that sha> HEAD`, check whether their earlier inline comments and any 'Do not merge until' hold are fixed in the code (`gh api repos/<repo>/pulls/<n>/comments`, `gh api repos/<repo>/pulls/<n>/reviews`), and keep the body to 2 or 3 sentences. For each of their earlier top-level inline comments add {\"in_reply_to\": <comment id>, \"body\": \"Checked in <short sha>: ...\"} to a `_thread_replies` list in the JSON."
    - "Method: follow the checklist in {{CHECKLIST}}."{{#DOCS}} "The governing docs are in {{DOCS}} (read only)."{{/DOCS}}{{#TEAM}} "Who owns what, with GitHub logins: {{TEAM}}."{{/TEAM}}{{#VOICE}} "Write the posted text in the voice described in {{VOICE}}."{{/VOICE}}
    - Then the whole of {{REVIEWER_RULES}}, appended as it is.
    Run `deputy model --tier review --label "<repo>#<n> review" --cwd <checkout> --timeout 1500 --prompt-file R/brief.md --out R/answer.md`.
 
-3. **The challenge (tier `challenge`), for important work only.** A PR is important when it touches {{IMPORTANT_TOPICS}}; when it changes files matching {{IMPORTANT_PATHS}}; or when the draft carries a "Do not merge until" hold, a blocker or REQUEST_CHANGES. For an important PR write R/challenge-brief.md: the PR, its checkout and base,{{#DOCS}} the docs folder,{{/DOCS}} the draft's verdict, each hold or blocker claim, and, when the draft found nothing serious, the line "the review found no blocking problem". Give it the claims and the code, not the reviewer's reasoning. Ask it to try to prove each claim wrong, and to find anything serious the review missed, each with file:line proof. Run `deputy model --tier challenge --label "<repo>#<n> challenge" --cwd <checkout> --timeout 1800 --prompt-file R/challenge-brief.md --out R/challenge.md`. Drop or downgrade a claim the challenge disproves (after reading the code yourself), and add a real problem it found that you confirm in the code. Never settle a disagreement by vote: the code or the docs decide.
+3. **The challenge (tier `challenge`), for important work only.** `deputy post` refuses important work until R/challenge.md exists, so don't skip it. A PR is important when it touches {{IMPORTANT_TOPICS}}; when it changes files matching {{IMPORTANT_PATHS}}; or when the draft carries a "Do not merge until" hold, a blocker or REQUEST_CHANGES. For an important PR write R/challenge-brief.md: the PR, its checkout and base,{{#DOCS}} the docs folder,{{/DOCS}} the draft's verdict, each hold or blocker claim, and, when the draft found nothing serious, the line "the review found no blocking problem". Give it the claims and the code, not the reviewer's reasoning. Ask it to try to prove each claim wrong, and to find anything serious the review missed, each with file:line proof. Run `deputy model --tier challenge --label "<repo>#<n> challenge" --cwd <checkout> --timeout 1800 --prompt-file R/challenge-brief.md --out R/challenge.md`. Drop or downgrade a claim the challenge disproves (after reading the code yourself), and add a real problem it found that you confirm in the code. Never settle a disagreement by vote: the code or the docs decide.
 
 ## 5. Check the draft, then hand it to deputy
 
@@ -65,7 +65,7 @@ Almost everything is decided by the rules above. Only when you truly cannot deci
 ## 6. Record and clean up
 
 - `deputy record {{JOB}} <repo>#<n> <head sha> "<outcome>"` for every PR you finished: posted, held or skipped.
-- `deputy cleanup <repo> <n>` removes the checkout. Never delete anything else.
+- `cd` out of the checkout first (for example into R), then `deputy cleanup <repo> <n>` removes the checkout. Never delete anything else; if it fails, leave it, deputy cleans up after the run.
 
 ## 7. Report
 

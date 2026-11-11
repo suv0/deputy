@@ -31,6 +31,8 @@ export const DEFAULTS = {
     requestChanges: "hold",
   },
   smallPrLines: 150,
+  // Important work (see important) can't be posted or held until the challenge tier has run.
+  requireChallenge: true,
   important: {
     paths: ["**/migrations/**", "**/auth/**", "**/payments/**", "**/billing/**", "**/infra/**", ".github/workflows/**", "**/*.tf", "**/Dockerfile"],
     topics: ["money", "payments", "billing", "refunds", "login", "sessions", "permissions", "secrets", "security", "personal data", "database migrations", "deploys"],

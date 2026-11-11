@@ -1,4 +1,4 @@
-Rules: read AGENTS.md or CONTRIBUTING.md first if the repo has one. Read only: do not edit, commit, push or post anything. Read the PR's description and existing review comments first (`gh pr view <n> -R <repo> --comments`, `gh api repos/<repo>/pulls/<n>/comments`) and don't repeat a point already raised.
+Rules: read AGENTS.md or CONTRIBUTING.md first if the repo has one. Read only: do not edit, commit, push or post anything. Read the PR's description, reviews and threads first (in the GitHub facts file you were given) and don't repeat a point already raised.
 
 Review it like a careful senior engineer: (1) does it match the governing docs, if any (cite file:line with a short quote)? (2) correctness, security, money and personal-data risks, silent failures, retries and races; (3) what it could break elsewhere today (other apps, SDKs, config, other open PRs touching the same files); (4) tests that would really catch a regression. Separate real problems from preferences. Say "unknown" rather than guess.
 

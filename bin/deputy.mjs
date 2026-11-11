@@ -9,7 +9,7 @@ import { checkConfig, loadJobs } from "../src/jobs.mjs";
 import { makeGh } from "../src/github.mjs";
 import { askModel, readUsage, sinceOf, usageSummary } from "../src/models.mjs";
 import { notify } from "../src/notify.mjs";
-import { findPending } from "../src/pending.mjs";
+import { describePr, findPending } from "../src/pending.mjs";
 import { dropHeld, listHeld, postReview } from "../src/post.mjs";
 import { isAlive, statusReport, describeStatus } from "../src/status.mjs";
 import { SOFTEN_PREFIX } from "../src/verdict.mjs";
@@ -30,6 +30,7 @@ Running
   deputy check <job>          run one job's check and print what it found (no agent run)
   deputy status [--line]      is it alive, and what is it doing
   deputy pending              the PRs that wait on you, as JSON
+  deputy review <owner/repo> <n>   review one PR now, whoever it requests (posting rules still apply)
   deputy held                 reviews held for you;  held post|soften|drop <k>
 
 Used by agent runs (any job)
@@ -128,6 +129,20 @@ const commands = {
     const { config, paths } = load();
     await watch({ config, paths, gh: makeGh(), notify: (t, b) => notify(t, b, { enabled: config.notify }), once: true });
     console.log(describeStatus(readJson(paths.status, null), { alive: true, held: listHeld(paths.held).length }));
+  },
+
+  async review() {
+    const { config, paths } = load();
+    const usage = "deputy review <owner/repo> <n>";
+    const repo = need(rest[0], usage), number = Number(need(rest[1], usage));
+    const gh = makeGh();
+    const item = await describePr({ config, gh, repo, number });
+    const [prJob] = loadJobs({ ...config, jobs: [{ name: config.jobs.find((j) => j.builtin === "pr-review")?.name ?? "pr-review", builtin: "pr-review" }] });
+    const job = { ...prJob, check: async () => [{ ...item, id: `${repo}#${number}`, version: item.head }] };
+    console.log(`deputy: reviewing ${repo} #${number} (${item.size}), posting: ${config.posting}. Follow it with: deputy status`);
+    const s = await watch({ config, paths, gh, jobs: [job], notify: (t, b) => notify(t, b, { enabled: config.notify }), once: true });
+    console.log(describeStatus(s, { alive: true, held: listHeld(paths.held).length }));
+    if (s.lastRun) console.log(`run log: ${s.lastRun.log}`);
   },
 
   async status() {
