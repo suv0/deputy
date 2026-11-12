@@ -43,6 +43,7 @@ Used by agent runs (any job)
   deputy cleanup <owner/repo> <n>
   deputy ask "<question>"                 the answer window: yes / no / your words
   deputy notify "<title>" "<body>"
+  deputy open <https url>                 open a link in the browser (the status band's buttons use it)
   deputy usage [--since 24h] [--line]
 
 Options: --config <file> (or $DEPUTY_CONFIG); state lives in ~/.deputy (or $DEPUTY_HOME).`;
@@ -303,6 +304,13 @@ const commands = {
     const { config } = load({ strict: false });
     const q = need(rest.join(" "), 'deputy ask "<question>"');
     console.log(JSON.stringify(await askUser(q, { minutes: Number(args.minutes ?? config.ask.minutes), remindEveryMinutes: config.ask.remindEveryMinutes })));
+  },
+
+  async open() {
+    const url = need(rest[0], "deputy open <https url>");
+    if (!url.startsWith("https://")) { console.error("deputy open only opens https links."); process.exit(2); }
+    const cmd = process.platform === "win32" ? ["explorer.exe", [url]] : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+    await run(cmd[0], cmd[1], { timeoutMs: 10_000, windowsHide: false });
   },
 
   async notify() {

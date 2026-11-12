@@ -265,7 +265,7 @@ Every number comes with a few words of what it is. `deputy pause` stops new runs
 
 **In Claude Code**, [integrations/claude-code-status](integrations/claude-code-status) is a mod that shows that line
 above your prompt, refreshed every 30 seconds: green when healthy, yellow while running or retrying, red when stopped
-or stuck, with every PR number a link to GitHub.
+or stuck, with every PR number a button that opens it on GitHub (the desktop app draws links in that band as plain text, so they are buttons).
 
 **Pop-ups** come when a run finishes (with the last lines of its own summary), when a review is held for you, and
 when runs or checks keep failing. Windows plays a chime and shows an on-top pop-up that closes itself after a minute;
@@ -369,6 +369,7 @@ then `systemctl --user enable --now deputy`.
 | `deputy post <review.json> [--post]` | The posting checks; then post or hold |
 | `deputy record <job> <id> <version> [outcome]` | Mark an item done at this version |
 | `deputy ask "<question>"` / `notify "<title>" "<body>"` | The answer window; a pop-up |
+| `deputy open <https url>` | Open a link in the browser, on any OS |
 | `deputy usage [--since 24h] [--line]` | What the models did |
 
 <details>

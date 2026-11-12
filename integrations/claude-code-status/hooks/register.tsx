@@ -6,9 +6,13 @@ import type { DeputyLine } from '../types'
 // Set DEPUTY_BIN to deputy's bin/deputy.mjs if `deputy` is not on PATH (npm link puts it there).
 const line = atom({ plugin: 'deputy-status', key: 'line' } as const, null)
 
-async function refresh($: EngineInterface) {
+async function deputy($: EngineInterface, args: string[]) {
   const bin = await $.env.get('DEPUTY_BIN')
-  const argv = bin ? ['node', bin, 'status', '--json'] : ['deputy', 'status', '--json']
+  return bin ? ['node', bin, ...args] : ['deputy', ...args]
+}
+
+async function refresh($: EngineInterface) {
+  const argv = await deputy($, ['status', '--json'])
   let next: DeputyLine
   try {
     const r = await $.process.run(argv, { timeoutMs: 10_000 })
@@ -20,7 +24,7 @@ async function refresh($: EngineInterface) {
   await update($, line, () => next)
 }
 
-// Splits the line around each link's text, so every PR number becomes its own Link element.
+// Splits the line around each link's text, so every PR number becomes its own button.
 function pieces(text: string, links: DeputyLine['links']) {
   const out: (string | { label: string; href: string })[] = []
   let rest = text
@@ -49,7 +53,12 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const current = await read($, line)
     if (e.props.hasSurvey || current === null) return next(e)
-    const { Box, Text, Link } = $.ui.resolve(e)
+    const { Box, Text, Button } = $.ui.resolve(e)
+    // The desktop app draws Link elements in this band as plain text, so each PR is a button that
+    // opens it through `deputy open` (explorer.exe, open or xdg-open, by platform).
+    const open = async (href: string) => {
+      try { await $.process.run(await deputy($, ['open', href]), { timeoutMs: 10_000 }) } catch {}
+    }
     return (
       <Box>
         <Text color={current.color}>● </Text>
@@ -59,7 +68,7 @@ export const register: Register = on => {
               {part}
             </Text>
           ) : (
-            <Link key={`l${i}`} href={part.href} label={part.label} />
+            <Button key={`b${i}`} label={part.label} onPress={() => open(part.href)} />
           ),
         )}
       </Box>
