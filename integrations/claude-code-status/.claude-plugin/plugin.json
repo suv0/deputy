@@ -1,0 +1,1 @@
+{ "name": "deputy-status", "version": "0.1.0", "description": "Shows deputy's state in a line above the Claude Code prompt: green when healthy, yellow while running or retrying, red when stopped or stuck. PR numbers link to GitHub.", "types": "./types/index.d.ts" }

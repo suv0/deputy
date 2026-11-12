@@ -48,11 +48,21 @@ test("auto mode posts, and reads the review back", async () => {
   assert.ok(existsSync(join(s.state, "send-42.json")));
 });
 
-test("auto mode still holds a REQUEST_CHANGES draft under the default policy", async () => {
+test("a challenged REQUEST_CHANGES posts by default; the hold policy keeps it for you", async () => {
   const s = setup({ posting: "auto" }, { event: "REQUEST_CHANGES" });
+  assert.equal((await postReview({ ...s, doPost: true })).outcome, "posted");
+  assert.equal(s.posted[0].event, "REQUEST_CHANGES");
+  const h = setup({ posting: "auto", verdict: { approveEvent: "APPROVE", requestChanges: "hold" } }, { event: "REQUEST_CHANGES" });
+  assert.equal((await postReview({ ...h, doPost: true })).outcome, "held");
+  assert.equal(h.posted.length, 0);
+});
+
+test("text that breaks the style rules is not posted", async () => {
+  const s = setup({ posting: "auto", style: { noDashes: true, maxSentences: 3, maxParagraphChars: 350, team: { Leo: "leo" } } }, { body: "Leo, this looks right — one thing." });
   const r = await postReview({ ...s, doPost: true });
-  assert.equal(r.outcome, "held");
-  assert.equal(s.posted.length, 0);
+  assert.equal(r.outcome, "invalid");
+  assert.ok(r.lines.some((l) => l.includes("em or en dash")));
+  assert.ok(r.lines.some((l) => l.includes("names Leo without the tag; write @leo")));
 });
 
 test("soften posts an approval with a CAUTION instead", async () => {

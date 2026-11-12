@@ -19,7 +19,7 @@ export const DEFAULTS = {
   repos: [],
   pollMinutes: 5,
   maxPrsPerRun: 4,
-  runLimitMinutes: 180,
+  runLimitMinutes: 120,
   // "draft": reviews are written and held for you; nothing reaches GitHub until you post it.
   // "auto": reviews that pass every check are posted. Opt in only once you trust the drafts.
   posting: "draft",
@@ -27,9 +27,12 @@ export const DEFAULTS = {
   verdict: {
     // What an approving review is sent as. "COMMENT" if your team doesn't want bot approvals to count.
     approveEvent: "APPROVE",
-    // A REQUEST_CHANGES draft: "hold" for you, "soften" into an approval with a red CAUTION, or "allow".
-    requestChanges: "hold",
+    // A REQUEST_CHANGES draft: "allow" (the challenge must have failed to disprove it first; deputy
+    // post enforces that), "soften" into an approval with a red CAUTION, or "hold" it for you.
+    requestChanges: "allow",
   },
+  // What posted text must look like (see src/style.mjs). team maps a name to its GitHub login.
+  style: { noDashes: true, maxSentences: 3, maxParagraphChars: 350, team: {} },
   smallPrLines: 150,
   // Important work (see important) can't be posted or held until the challenge tier has run.
   requireChallenge: true,
@@ -53,6 +56,9 @@ export const DEFAULTS = {
   },
   models: {
     tools: { "command-code": "command-code", codex: "codex", opencode: "opencode", claude: "claude" },
+    // Only these tools may judge: draft a review or try to disprove one. Legwork may run anywhere.
+    judges: ["codex", "claude"],
+    judgingTiers: ["review", "challenge"],
     tiers: {
       // Claude Code's model aliases, so a fresh install works with only `claude` on PATH.
       legwork: [{ tool: "claude", model: "haiku" }],
@@ -138,6 +144,8 @@ export function paths(c) {
     done: join(s, "done.json"),
     lock: join(s, "running.lock"),
     pid: join(s, "watcher.pid"),
+    guardPid: join(s, "guard.pid"),
+    pause: join(s, "paused.json"),
     log: join(s, "watcher.log"),
     runs: join(s, "runs"),
     held: join(s, "held"),

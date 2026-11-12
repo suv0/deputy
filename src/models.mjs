@@ -5,6 +5,9 @@
 // deputy remembers that until the reset (or 15 minutes) and skips every model on that tool.
 //
 // Tools: command-code, codex, opencode (OpenRouter and others), claude. Read-only by default.
+// Legwork may run on any tool. The judging tiers (review, challenge) run only on the tools in
+// models.judges (Codex and Claude by default): when none of those is available, deputy model exits
+// with code 3, and the agent run does that stage itself.
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -13,7 +16,27 @@ import { readJson, run, writeJson } from "./util.mjs";
 export const TOOLS = ["command-code", "codex", "opencode", "claude"];
 export const ACCOUNT_LIMIT = /usage limit|rate limit|insufficient|out of credit|credit balance|balance|quota|billing|unauthori[sz]ed|not logged in|\b401\b|\b402\b|\b429\b/i;
 
-/** The models to try, in order, with the ones skipped because their tool is down. Pure. */
+export const DEFAULT_JUDGES = ["codex", "claude"];
+export const DEFAULT_JUDGING_TIERS = ["review", "challenge"];
+
+/** Is this tier one that judges (drafts a verdict or tries to disprove one)? Pure. */
+export function isJudgingTier(models, tier) {
+  return (models.judgingTiers ?? DEFAULT_JUDGING_TIERS).includes(tier);
+}
+
+/** Judging tiers that name a tool not trusted to judge. Pure. */
+export function judgeProblems(models) {
+  const judges = models.judges ?? DEFAULT_JUDGES;
+  const out = [];
+  for (const tier of models.judgingTiers ?? DEFAULT_JUDGING_TIERS)
+    for (const c of models.tiers?.[tier] ?? []) if (!judges.includes(c.tool)) out.push(`models.tiers.${tier}: ${c.tool} is not in models.judges (${judges.join(", ")}), so it can't judge`);
+  return out;
+}
+
+/**
+ * The models to try, in order, with the ones skipped because their tool is down, or because the
+ * tier judges and the tool isn't trusted to. Pure.
+ */
 export function planCandidates(models, { tier, tool, model, effort } = {}, down = {}, now = Date.now()) {
   const list = [];
   if (tool || model) {
@@ -27,7 +50,9 @@ export function planCandidates(models, { tier, tool, model, effort } = {}, down 
   }
   if (!list.length) list.push(...(models.tiers?.legwork ?? []));
   const usable = [], skipped = [];
+  const judges = models.judges ?? DEFAULT_JUDGES;
   for (const c of list) {
+    if (tier && isJudgingTier(models, tier) && !judges.includes(c.tool)) { skipped.push({ ...c, why: `${c.tool} is not trusted to judge` }); continue; }
     const d = down[c.tool];
     if (d && Date.parse(d.until) > now) skipped.push({ ...c, why: `${c.tool} is out of limit until ${d.until}` });
     else usable.push(c);
@@ -86,7 +111,9 @@ const runners = {
     const perm = o.mode === "read" ? ["--agent", "plan"] : ["--auto"];
     const args = ["run", "--format", "json", "-m", c.model, "--dir", o.cwd, ...perm];
     if (c.effort) args.push("--variant", c.effort);
-    const r = await run(o.command, args, { input: o.prompt, cwd: o.cwd, timeoutMs: o.timeoutMs });
+    // opencode refuses to read outside its folder unless told it may (docs, the run folder).
+    const env = { ...process.env, OPENCODE_CONFIG_CONTENT: process.env.OPENCODE_CONFIG_CONTENT ?? JSON.stringify({ permission: { external_directory: "allow" } }) };
+    const r = await run(o.command, args, { input: o.prompt, cwd: o.cwd, env, timeoutMs: o.timeoutMs });
     let text = "", tokens = 0, error = null;
     for (const j of jsonLines(r.stdout)) {
       if (j.type === "text" && j.part?.text) text += j.part.text;
@@ -138,7 +165,10 @@ export async function askModel({ config, paths, prompt, tier, tool, model, effor
     const until = downUntil(entry.error);
     if (until) { down[c.tool] = { until, why: entry.error.slice(0, 120) }; writeJson(paths.down, down); }
   }
-  return { ok: false, text: null, did: null, attempts };
+  // A judging tier with no model left: the agent run does the stage itself. A model limit never
+  // stops the work.
+  const judgeUnavailable = Boolean(tier && isJudgingTier(config.models, tier));
+  return { ok: false, text: null, did: null, attempts, judgeUnavailable };
 }
 
 /** `deputy usage --since <iso|24h|7d>`: one line, or a short table, of what the models did. */

@@ -1,21 +1,20 @@
 {
-  "_comment": "An example `models` block that mixes tools: cheap models do the legwork, a strong one reviews, a different vendor challenges. Paste it over `models` in your config and use the model names your own accounts offer. Each tier is tried in order; a tool that reports it is out of limit or credit is skipped until its reset.",
+  "_comment": "An example `models` block that mixes tools. Legwork may run anywhere, cheapest first: Command Code, then Codex's small model, then a cheap OpenRouter model through opencode (paid per token, so last). Judging (the review and the challenge) runs only on the tools in `judges`: when every judge is out of limit or credit, `deputy model` exits with code 3 and the run does that stage itself, so a model limit never stops the work. OpenRouter is never a judge here. Use the model names your own accounts offer.",
   "models": {
     "tools": { "command-code": "command-code", "codex": "codex", "opencode": "opencode", "claude": "claude" },
+    "judges": ["codex", "claude"],
+    "judgingTiers": ["review", "challenge"],
     "tiers": {
       "legwork": [
         { "tool": "command-code", "model": "deepseek/deepseek-v4.1-flash" },
         { "tool": "codex", "model": "gpt-6-luna", "effort": "medium" },
-        { "tool": "claude", "model": "haiku" }
+        { "tool": "opencode", "model": "openrouter/deepseek/deepseek-v4.1-flash" }
       ],
       "review": [
-        { "tool": "codex", "model": "gpt-6.1-sol", "effort": "high" },
-        { "tool": "claude", "model": "sonnet" },
-        { "tool": "opencode", "model": "openrouter/moonshotai/kimi-k3.1-pro" }
+        { "tool": "codex", "model": "gpt-6.1-sol", "effort": "high" }
       ],
       "challenge": [
-        { "tool": "codex", "model": "gpt-6-astra", "effort": "xhigh" },
-        { "tool": "claude", "model": "opus" }
+        { "tool": "codex", "model": "gpt-6-astra", "effort": "xhigh" }
       ]
     }
   }

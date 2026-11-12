@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { basename, dirname, join } from "node:path";
 import { checkAnchors } from "./anchors.mjs";
 import { alertsIn, applyVerdictPolicy, checkShape, verdictLabel } from "./verdict.mjs";
+import { payloadStyleProblems } from "./style.mjs";
 import { readJson, run, writeJson } from "./util.mjs";
 
 export async function docsTip(docsDir) {
@@ -23,6 +24,9 @@ export async function checkReview({ payload, gh, config, runDir = null, getDocsT
   const notes = [];
   if (problems.length) return { problems, notes, policy: null };
   const repo = payload._repo, n = payload._number;
+
+  // The text first: it reads like a teammate typed it, or it doesn't leave.
+  problems.push(...payloadStyleProblems(payload, config.style));
 
   const pr = await gh.json(["pr", "view", String(n), "-R", repo, "--json", "headRefOid,state,isDraft"]);
   if (pr.headRefOid !== payload.commit_id) problems.push(`head moved: now ${pr.headRefOid.slice(0, 9)}, review is for ${payload.commit_id.slice(0, 9)}`);

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describeStatus, stageOf, statusReport, stuckJobs } from "../src/status.mjs";
+import { colorOf, describeStatus, stageOf, statusLinks, statusReport, stuckJobs } from "../src/status.mjs";
 
 const now = Date.parse("2026-11-11T12:00:00Z");
 const job = (over = {}) => ({ everyMinutes: 5, checkedAt: "2026-11-11T11:58:00Z", lastError: null, failuresInARow: 0, lastFound: 0, ...over });
@@ -16,9 +16,9 @@ test("not started, stopped, dead process", () => {
 });
 
 test("healthy, and a failing check named", () => {
-  assert.equal(describeStatus(base, { now, alive: true }), "deputy: ok, checked 2m ago");
+  assert.equal(describeStatus(base, { now, alive: true }), "deputy: idle, checked 2m ago");
   const failing = { ...base, jobs: { ...base.jobs, "failing-ci": job({ lastError: "gh: timed out" }) } };
-  assert.equal(describeStatus(failing, { now, alive: true }), "deputy: ok, checked 2m ago, failing-ci check failing");
+  assert.equal(describeStatus(failing, { now, alive: true }), "deputy: idle, checked 2m ago, failing-ci check failing");
 });
 
 test("a job whose check is more than two cycles old reads as stuck", () => {
@@ -33,7 +33,7 @@ test("running names the job and its items", () => {
 });
 
 test("draft mode and held reviews are shown", () => {
-  assert.equal(describeStatus({ ...base, posting: "draft" }, { now, alive: true, held: 2 }), "deputy: ok, checked 2m ago · draft mode · 2 held for you (deputy held)");
+  assert.equal(describeStatus({ ...base, posting: "draft" }, { now, alive: true, held: 2 }), "deputy: idle, checked 2m ago · draft mode · 2 held for you (deputy held)");
 });
 
 test("stageOf follows the run folder's files in order", () => {
@@ -56,11 +56,29 @@ test("statusReport lists each job, and each PR's stage from its run folder", () 
   ] } };
   const lines = statusReport(s, { now, alive: true, held: 0, runsDir: runs });
   assert.ok(lines.includes("  pr-review: every 5 min, checked 2m ago, found 0"));
-  assert.ok(lines.includes("  acme/shop #42: review drafted, checking claims in the code"));
-  assert.ok(lines.includes("  acme/shop #43: setting up"));
+  assert.ok(lines.includes("  shop #42: review drafted, checking claims in the code"));
+  assert.ok(lines.includes("  shop #43: setting up"));
+  assert.match(lines[0], /running for shop #42: review drafted, checking claims in the code, shop #43: setting up/);
 });
 
 test("a job that just finished a long run is not stuck", () => {
   const s = { ...base, jobs: { "pr-review": job({ checkedAt: "2026-11-11T11:30:00Z" }) }, lastRun: { job: "pr-review", at: "2026-11-11T11:59:00Z", items: [], code: 0 } };
   assert.deepEqual(stuckJobs(s, now), []);
+});
+
+test("restarting, paused, retrying and the last run when idle", () => {
+  assert.equal(describeStatus({ ...base, state: "stopped" }, { now, alive: false, guardAlive: true }), "deputy: restarting (the guard brings it back)");
+  assert.match(describeStatus({ ...base, state: "paused", paused: { reason: "holiday", waiting: 2 } }, { now, alive: true }), /PAUSED, 2 waiting \(holiday\)/);
+  const retry = { ...base, jobs: { "pr-review": job({ retryAt: "2026-11-11T12:20:00Z", failedRuns: 2 }) } };
+  assert.match(describeStatus(retry, { now, alive: true }), /last run failed, retrying pr-review at/);
+  const idle = { ...base, lastRun: { job: "pr-review", at: "2026-11-11T11:00:00Z", items: [{ label: "shop #42 (coupons stack)" }], code: 0 } };
+  assert.match(describeStatus(idle, { now, alive: true }), /idle, checked 2m ago · last: shop #42 \(coupons stack\) at /);
+});
+
+test("colorOf and statusLinks for a status bar", () => {
+  assert.equal(colorOf("deputy: idle, checked 2m ago"), "success");
+  assert.equal(colorOf("deputy: pr-review running for shop #42"), "warning");
+  assert.equal(colorOf("deputy: STOPPED (last check 1h ago)"), "error");
+  const s = { running: { items: [{ id: "acme/shop#42", repo: "acme/shop", number: 42 }] }, lastRun: { items: [{ id: "acme/shop#42", repo: "acme/shop", number: 42 }, { id: "x", label: "x" }] } };
+  assert.deepEqual(statusLinks(s), [{ text: "shop #42", href: "https://github.com/acme/shop/pull/42" }]);
 });

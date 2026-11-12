@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULTS, merge, paths as pathsOf } from "./config.mjs";
 import { postReview } from "./post.mjs";
+import { record } from "./checkout.mjs";
 import { describeStatus, runDirName, stageOf } from "./status.mjs";
 import { sleep } from "./util.mjs";
 import { watch } from "./watcher.mjs";
@@ -131,6 +132,7 @@ export async function demo({ fast = false, popup = true, draft = false, out = co
 
     r = await postReview({ file, config, paths, gh, doPost: true });
     result = r.outcome;
+    record(paths.done, { job: "pr-review", id: `${pr.repo}#${pr.number}`, version: pr.head, outcome: r.outcome });
     if (r.outcome === "posted") step(green("✔"), `Review posted on acme/shop #42: ${bold("approved, do not merge yet")} ${dim("(1 inline comment)")}`);
     else step(yellow("●"), `Review ${bold("held for you")} (draft mode). In real use: ${cyan("deputy held")}`);
     return { code: 0, out: r.outcome === "posted" ? "acme/shop #42: approved, do not merge until the total can't go below zero." : "acme/shop #42: held for you (draft mode).", log: join(paths.runs, "demo.log") };

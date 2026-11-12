@@ -33,24 +33,51 @@ export function stuckJobs(s, now = Date.now()) {
   }).map(([name, j]) => ({ name, checkedAt: j.checkedAt }));
 }
 
+const hhmm = (iso) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
 /**
- * The one-line health summary, for a terminal or a status bar.
- * @param s       status.json contents, or null
- * @param alive   whether s.pid is a live process
- * @param held    how many reviews wait in held/
+ * The one-line health summary, for a terminal or a status bar. Pure.
+ * @param s           status.json contents, or null
+ * @param alive       whether the core (s.pid) is a live process
+ * @param guardAlive  whether the guard is a live process (it brings a stopped core back)
+ * @param held        how many reviews wait in held/
+ * @param stageFor    (item) => a running item's stage, or null
  */
-export function describeStatus(s, { now = Date.now(), alive = false, held = 0 } = {}) {
+export function describeStatus(s, { now = Date.now(), alive = false, guardAlive = false, held = 0, stageFor = () => null } = {}) {
   let line;
   const failing = Object.entries(s?.jobs ?? {}).filter(([, j]) => j.lastError).map(([n]) => n);
+  const retrying = Object.entries(s?.jobs ?? {}).filter(([, j]) => j.retryAt && Date.parse(j.retryAt) > now);
   if (!s) line = "deputy: not started yet (deputy start)";
-  else if (!alive || s.state === "stopped") line = `deputy: STOPPED (last check ${ago(s.checkedAt, now)})`;
-  else if (s.state === "running" && s.running) line = `deputy: ${s.running.job} running for ${s.running.items.map((i) => i.label).join(", ")}`;
+  else if (!alive || s.state === "stopped" || s.state === "reloading")
+    line = guardAlive ? "deputy: restarting (the guard brings it back)" : `deputy: STOPPED (last check ${ago(s.checkedAt, now)})`;
+  else if (s.state === "running" && s.running)
+    line = `deputy: ${s.running.job} running for ${s.running.items.map((i) => { const st = stageFor(i); return st ? `${i.label}: ${st}` : i.label; }).join(", ")}`;
+  else if (s.state === "paused" && s.paused) line = `deputy: PAUSED, ${s.paused.waiting} waiting (${s.paused.reason}). deputy resume starts runs again`;
+  else if (retrying.length) line = `deputy: last run failed, retrying ${retrying.map(([n, j]) => `${n} at ${hhmm(j.retryAt)}`).join(", ")}`;
   else if (stuckJobs(s, now).length) line = `deputy: STUCK (${stuckJobs(s, now).map((j) => `${j.name} last checked ${ago(j.checkedAt, now)}`).join(", ")})`;
   else if (!s.checkedAt) line = "deputy: starting";
-  else line = `deputy: ok, checked ${ago(s.checkedAt, now)}${failing.length ? `, ${failing.join(", ")} check failing` : ""}`;
+  else {
+    line = `deputy: idle, checked ${ago(s.checkedAt, now)}${failing.length ? `, ${failing.join(", ")} check failing` : ""}`;
+    if (s.lastRun) line += ` · last: ${s.lastRun.items.map((i) => i.label).join(", ")} at ${hhmm(s.lastRun.at)}`;
+  }
   if (s?.posting === "draft") line += " · draft mode";
   if (held) line += ` · ${held} held for you (deputy held)`;
   return line;
+}
+
+/** Green, yellow or red for a status bar. Pure. */
+export function colorOf(line) {
+  if (/STOPPED|STUCK|not started|unreadable/.test(line)) return "error";
+  if (/running|PAUSED|failed|failing|restarting|held for you/.test(line)) return "warning";
+  return "success";
+}
+
+/** The status line with links for every PR it names, for a status bar. Pure. */
+export function statusLinks(s) {
+  const items = [...(s?.running?.items ?? []), ...(s?.lastRun?.items ?? [])].filter((i) => i.repo && i.number);
+  const seen = new Set();
+  return items.filter((i) => !seen.has(i.id) && seen.add(i.id))
+    .map((i) => ({ text: `${i.repo.split("/")[1]} #${i.number}`, href: `https://github.com/${i.repo}/pull/${i.number}` }));
 }
 
 export function isAlive(pid) {
@@ -59,17 +86,25 @@ export function isAlive(pid) {
 }
 
 /** The full report: the line, then the current run's PRs and stages, last run, last error. */
-export function statusReport(s, { now = Date.now(), alive, held, runsDir }) {
-  const out = [describeStatus(s, { now, alive, held })];
+export function stageForRun(runsDir) {
+  return (i) => {
+    if (i.repo == null) return null;
+    const dir = join(runsDir, runDirName(i.repo, i.number));
+    return stageOf(existsSync(dir) ? readdirSync(dir) : [], i.number);
+  };
+}
+
+export function statusReport(s, { now = Date.now(), alive, guardAlive = false, held, runsDir }) {
+  const out = [describeStatus(s, { now, alive, guardAlive, held, stageFor: stageForRun(runsDir) })];
   if (!s) return out;
   out.push(`  running since ${s.startedAt}, pid ${s.pid}`);
   for (const [name, j] of Object.entries(s.jobs ?? {}))
-    out.push(`  ${name}: every ${j.everyMinutes} min, checked ${ago(j.checkedAt, now)}${j.lastError ? `, failing: ${j.lastError}` : `, found ${j.lastFound ?? 0}`}`);
+    out.push(`  ${name}: every ${j.everyMinutes} min, checked ${ago(j.checkedAt, now)}${j.lastError ? `, failing: ${j.lastError}` : `, found ${j.lastFound ?? 0}`}${j.failedRuns ? `, ${j.failedRuns} failed run(s) in a row, next try ${j.retryAt}` : ""}`);
   for (const r of s.state === "running" && s.running ? s.running.items : []) {
     if (r.repo == null) { out.push(`  ${r.label}: running`); continue; }
     const dir = join(runsDir, runDirName(r.repo, r.number));
     const files = existsSync(dir) ? readdirSync(dir) : [];
-    out.push(`  ${r.repo} #${r.number}: ${stageOf(files, r.number)}`);
+    out.push(`  ${r.label}: ${stageOf(files, r.number)}`);
   }
   if (s.lastRun) out.push(`  last run: ${s.lastRun.job} for ${s.lastRun.items.map((i) => i.label).join(", ")} ${ago(s.lastRun.at, now)}, exit ${s.lastRun.code}, log ${s.lastRun.log}`);
   return out;

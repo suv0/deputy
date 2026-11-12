@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { DEPUTY_BIN, ROOT, validate } from "./config.mjs";
+import { judgeProblems } from "./models.mjs";
 import { cleanup } from "./checkout.mjs";
 import { findPending } from "./pending.mjs";
 import { buildPrompt, renderTemplate } from "./prompt.mjs";
@@ -58,6 +59,18 @@ export function resolveJobPath(config, p) {
   return existsSync(local) ? local : existsSync(resolve(ROOT, p)) ? resolve(ROOT, p) : local;
 }
 
+/**
+ * A few words of what a PR is about, so a number never shows alone. Pure.
+ * "[BE] Accounts: routes D16 and D17, the legal papers (#423)" -> "accounts routes D16 D17"
+ */
+export function shortTitle(title = "", words = 4) {
+  const plain = String(title).replace(/\[[^\]]*\]\s*/g, "").replace(/\s*\(#?\d[^)]*\)/g, "").trim();
+  const [head, ...rest] = plain.split(":");
+  const text = (rest.length ? `${head} ${rest.join(":")}` : head).split(",")[0];
+  const kept = text.split(/\s+/).filter((w) => w && !/^(the|a|an|and|its|their|of|to|for|at|in|on|by|with|from|into|use|uses|now)$/i.test(w)).slice(0, words);
+  return kept.map((w, i) => (i === 0 ? w.toLowerCase() : w)).join(" ");
+}
+
 /** The built-in job: pull requests that wait on your review. */
 function prReviewJob(def, config) {
   return {
@@ -71,7 +84,7 @@ function prReviewJob(def, config) {
       return prs.map((p) => ({ ...p, id: `${p.repo}#${p.number}`, version: p.head }));
     },
     prompt: (items) => buildPrompt(config, items, def.name),
-    label: (item) => `${item.repo.split("/")[1]} #${item.number}`,
+    label: (item) => `${item.repo.split("/")[1]} #${item.number}${item.title ? ` (${shortTitle(item.title)})` : ""}`,
     doneVerb: "Reviewed",
     // A backstop: the run cleans up its checkouts, but a shell left inside one can stop it.
     async afterRun({ items }) {
@@ -143,5 +156,5 @@ export function usesPrReview(config) {
 
 /** Every problem with the config, jobs included. */
 export function checkConfig(config) {
-  return validate(config, { jobProblems, usesPrReview });
+  return [...validate(config, { jobProblems, usesPrReview }), ...judgeProblems(config.models ?? {})];
 }

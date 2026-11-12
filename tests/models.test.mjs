@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { askModel, downUntil, planCandidates, readUsage, sinceOf, takeDidLine, usageSummary } from "../src/models.mjs";
+import { askModel, downUntil, judgeProblems, planCandidates, readUsage, sinceOf, takeDidLine, usageSummary } from "../src/models.mjs";
 import { readJson } from "../src/util.mjs";
 
 const models = {
@@ -81,4 +81,27 @@ test("sinceOf understands today, durations and ISO times", () => {
   assert.equal(sinceOf("all", now), 0);
   assert.equal(sinceOf("2026-11-10T00:00:00Z", now), Date.parse("2026-11-10T00:00:00Z"));
   assert.throws(() => sinceOf("yesterday-ish", now));
+});
+
+test("judging tiers run only on trusted tools; legwork runs anywhere", () => {
+  const m = { judges: ["codex", "claude"], tiers: {
+    legwork: [{ tool: "opencode", model: "cheap" }, { tool: "codex", model: "luna" }],
+    review: [{ tool: "opencode", model: "kimi" }, { tool: "codex", model: "sol" }],
+  } };
+  assert.deepEqual(planCandidates(m, { tier: "legwork" }).usable.map((c) => c.model), ["cheap", "luna"]);
+  const r = planCandidates(m, { tier: "review" });
+  assert.deepEqual(r.usable.map((c) => c.model), ["sol"]);
+  assert.match(r.skipped[0].why, /not trusted to judge/);
+  assert.deepEqual(judgeProblems(m), ["models.tiers.review: opencode is not in models.judges (codex, claude), so it can't judge"]);
+});
+
+test("when no judge is left, askModel says so, so the run judges by itself", async () => {
+  const state = mkdtempSync(join(tmpdir(), "deputy-models-"));
+  const paths = { down: join(state, "down.json"), usage: join(state, "runs.jsonl") };
+  const config = { models: { tiers: { review: [{ tool: "codex", model: "sol" }], legwork: [{ tool: "codex", model: "luna" }] } } };
+  const runner = { codex: async () => ({ ok: false, error: "out of credits" }) };
+  const review = await askModel({ config, paths, prompt: "x", tier: "review", runner, log: () => {} });
+  assert.equal(review.judgeUnavailable, true);
+  const legwork = await askModel({ config, paths, prompt: "x", tier: "legwork", runner, log: () => {} });
+  assert.equal(legwork.judgeUnavailable, false);
 });

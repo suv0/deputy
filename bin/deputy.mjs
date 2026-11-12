@@ -4,17 +4,18 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:
 import { join, resolve } from "node:path";
 import { askUser } from "../src/ask.mjs";
 import { cleanup, prepare, record } from "../src/checkout.mjs";
-import { defaultStateDir, loadConfig, paths as pathsOf, ROOT } from "../src/config.mjs";
+import { DEPUTY_BIN, defaultStateDir, loadConfig, paths as pathsOf, ROOT } from "../src/config.mjs";
 import { checkConfig, loadJobs } from "../src/jobs.mjs";
 import { makeGh } from "../src/github.mjs";
 import { askModel, readUsage, sinceOf, usageSummary } from "../src/models.mjs";
 import { notify } from "../src/notify.mjs";
 import { describePr, findPending } from "../src/pending.mjs";
 import { dropHeld, listHeld, postReview } from "../src/post.mjs";
-import { isAlive, statusReport, describeStatus } from "../src/status.mjs";
+import { colorOf, describeStatus, isAlive, statusLinks, statusReport } from "../src/status.mjs";
 import { SOFTEN_PREFIX } from "../src/verdict.mjs";
 import { parseArgs, readJson, run, writeJson } from "../src/util.mjs";
-import { claimPidFile, lockHeld, watch } from "../src/watcher.mjs";
+import { claimPidFile, codeStamp, lockHeld, makeLog, watch } from "../src/watcher.mjs";
+import { spawnCore, supervise } from "../src/guard.mjs";
 
 const HELP = `deputy: background agent jobs that wake only when there is work. Built in: PR review.
 
@@ -24,11 +25,12 @@ Setup
   deputy demo [--fast] [--no-popup] [--draft]   one whole review with no GitHub and no model
 
 Running
-  deputy start                run every job's check on its timer (foreground; see the README for logon)
+  deputy start                run the jobs under a guard that restarts them after a crash (see the README for logon)
+  deputy pause [reason] / resume   stop or allow new runs; the checks go on
   deputy once                 check every job once, and run the ones with work
   deputy jobs                 the configured jobs
   deputy check <job>          run one job's check and print what it found (no agent run)
-  deputy status [--line]      is it alive, and what is it doing
+  deputy status [--line|--json]   is it alive, and what is it doing (--json: line, color, links for a status bar)
   deputy pending              the PRs that wait on you, as JSON
   deputy review <owner/repo> <n>   review one PR now, whoever it requests (posting rules still apply)
   deputy held                 reviews held for you;  held post|soften|drop <k>
@@ -112,17 +114,46 @@ const commands = {
   },
 
   async start() {
+    // The guard: keeps the core alive, restarts it after a crash, and starts new code when it reloads.
+    const { config, paths } = load();
+    mkdirSync(paths.state, { recursive: true });
+    const other = claimPidFile(paths.guardPid);
+    if (other) { console.log(`deputy is already running (guard pid ${other}).`); return; }
+    const log = makeLog(paths.log, "guard: ");
+    const stop = supervise({ startCore: () => spawnCore(DEPUTY_BIN, config.file), log });
+    const leave = () => { stop(); try { if (readFileSync(paths.guardPid, "utf8") === String(process.pid)) rmSync(paths.guardPid); } catch {} process.exit(0); };
+    for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, leave);
+    log(`started (pid ${process.pid})`);
+    console.log(`deputy: running ${loadJobs(config).map((j) => `${j.name} (every ${j.everyMinutes} min)`).join(", ")}; posting: ${config.posting}. Ctrl+C stops it.`);
+  },
+
+  async core() {
+    // The loop itself. `deputy start` runs this under the guard; run it alone only to debug.
     const { config, paths } = load();
     mkdirSync(paths.state, { recursive: true });
     const other = claimPidFile(paths.pid);
-    if (other) { console.log(`deputy is already watching (pid ${other}).`); return; }
+    if (other) { console.log(`deputy core is already running (pid ${other}).`); return; }
     process.on("exit", () => {
       try { if (readFileSync(paths.pid, "utf8") === String(process.pid)) rmSync(paths.pid); } catch {}
-      try { writeJson(paths.status, { ...readJson(paths.status, {}), state: "stopped", stoppedAt: new Date().toISOString() }); } catch {}
+      try { const s = readJson(paths.status, {}); if (s.state !== "reloading") writeJson(paths.status, { ...s, state: "stopped", stoppedAt: new Date().toISOString() }); } catch {}
     });
     for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => process.exit(0));
-    console.log(`deputy: running ${loadJobs(config).map((j) => `${j.name} (every ${j.everyMinutes} min)`).join(", ")}; posting: ${config.posting}. Ctrl+C stops it.`);
-    await watch({ config, paths, gh: makeGh(), notify: (t, b) => notify(t, b, { enabled: config.notify }) });
+    rmSync(paths.lock, { force: true }); // this core starts the runs; no run of an older core survives it
+    const stamp = codeStamp();
+    const s = await watch({ config, paths, gh: makeGh(), notify: (t, b) => notify(t, b, { enabled: config.notify }), codeChanged: () => codeStamp() !== stamp });
+    process.exit(s.reload ? 0 : 1);
+  },
+
+  async pause() {
+    const { paths } = load({ strict: false });
+    writeJson(paths.pause, { reason: rest.join(" ") || "paused by hand", at: new Date().toISOString() });
+    console.log("deputy: paused. Checks go on, no new runs start. deputy resume starts them again.");
+  },
+
+  async resume() {
+    const { paths } = load({ strict: false });
+    rmSync(paths.pause, { force: true });
+    console.log("deputy: resumed.");
   },
 
   async once() {
@@ -149,7 +180,10 @@ const commands = {
     const { paths } = load({ strict: false });
     const s = readJson(paths.status, null);
     const held = listHeld(paths.held).length;
-    const lines = statusReport(s, { alive: isAlive(s?.pid), held, runsDir: paths.runs });
+    let guardPid = 0;
+    try { guardPid = Number(readFileSync(paths.guardPid, "utf8")); } catch {}
+    const lines = statusReport(s, { alive: isAlive(s?.pid), guardAlive: isAlive(guardPid), held, runsDir: paths.runs });
+    if (args.json) { console.log(JSON.stringify({ line: lines[0], color: colorOf(lines[0]), links: statusLinks(s) })); return; }
     console.log(args.line ? lines[0] : lines.join("\n"));
   },
 
@@ -203,7 +237,10 @@ const commands = {
     });
     if (!r.ok) {
       console.error(`deputy model: every model failed:\n${r.attempts.map((a) => `  ${a.tool} ${a.model}: ${a.error}`).join("\n") || "  (none was available)"}`);
-      process.exitCode = 1;
+      if (r.judgeUnavailable) {
+        console.error(`JUDGE_UNAVAILABLE: no trusted model can do the ${args.tier} stage now. Do it yourself, with the same brief and output, and say so in the summary.`);
+        process.exitCode = 3;
+      } else process.exitCode = 1;
       return;
     }
     if (args.out) { const { writeFileSync } = await import("node:fs"); writeFileSync(args.out, r.text); }

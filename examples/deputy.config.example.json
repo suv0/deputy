@@ -14,7 +14,14 @@
   "skipApprovedByOthers": true,
   "verdict": {
     "approveEvent": "APPROVE",
-    "requestChanges": "hold"
+    "requestChanges": "allow"
+  },
+
+  "style": {
+    "noDashes": true,
+    "maxSentences": 3,
+    "maxParagraphChars": 350,
+    "team": { "Maya": "maya", "Leo": "leo", "Sam": { "login": "sam", "honorific": "ji" } }
   },
 
   "important": {

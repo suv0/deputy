@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="760" height="400" viewBox="0 0 760 400" font-family="Segoe UI, Helvetica, Arial, sans-serif">
-  <title>deputy: cheap checks run on timers; when the PR check finds a review request, facts, review and challenge run on outside models, the review is posted, and a pop-up says so</title>
-  <!-- One 20-second loop:
-       0-2.4s three checks run, two find nothing (no model), the PR check finds a request;
-       2.4-5.6s the request; 5.6-8.8s facts; 8.8-12s review; 12-14.8s challenge; 14.8-20s posted, pop-up at 16.8s. -->
+  <title>deputy: cheap checks run on timers; the PR check finds a review request; legwork, review and challenge run on outside models; the posting checks pass and the review is posted; a pop-up says so; then the core crashes and the guard brings it back</title>
+  <!-- One 25-second loop:
+       0-2.5s checks; 2.5-5s request; 5-8s legwork; 8-11s review; 11-14s challenge; 14-16.5s posting checks;
+       16.5-21s posted, pop-up at 18.3s; 21-25s the core crashes and the guard brings it back. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0F172A"/>
@@ -17,17 +17,17 @@
   <rect x="40" y="32" width="24" height="24" rx="6" fill="#FBBF24"/>
   <text x="52" y="49" fill="#0F172A" font-size="14" font-weight="bold" text-anchor="middle">d</text>
   <text x="74" y="49" fill="#F1F5F9" font-size="15" font-weight="600">deputy</text>
-  <text x="720" y="49" fill="#94A3B8" font-size="12" text-anchor="end" font-family="Consolas, Menlo, monospace">deputy: ok, checked just now</text>
+  <text x="720" y="49" fill="#94A3B8" font-size="12" text-anchor="end" font-family="Consolas, Menlo, monospace">guard ✓ · core ✓ · one run at a time</text>
 
   <!-- the jobs: cheap checks on timers -->
   <g font-size="12">
     <rect x="40" y="66" width="216" height="30" rx="15" fill="#1E293B" stroke="#334155"/>
     <circle cx="58" cy="81" r="5" fill="#64748B">
-      <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#64748B;#FBBF24;#22C55E" keyTimes="0;0.08;0.74"/>
+      <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#64748B;#FBBF24;#22C55E;#EF4444;#22C55E" keyTimes="0;0.08;0.66;0.84;0.95"/>
     </circle>
     <text x="70" y="85" fill="#E2E8F0" font-weight="600">pr-review</text>
     <text x="244" y="85" fill="#94A3B8" text-anchor="end">every 5 min
-      <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#94A3B8;#FBBF24;#94A3B8" keyTimes="0;0.08;0.74"/>
+      <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#94A3B8;#FBBF24;#94A3B8" keyTimes="0;0.08;0.66"/>
     </text>
 
     <rect x="268" y="66" width="216" height="30" rx="15" fill="#1E293B" stroke="#334155"/>
@@ -42,50 +42,59 @@
   </g>
 
   <!-- the run's steps -->
-  <g font-size="13" text-anchor="middle">
+  <g font-size="12.5" text-anchor="middle">
     <g>
-      <rect x="40" y="110" width="124" height="28" rx="8" fill="#1E293B"/>
-      <rect x="40" y="110" width="124" height="28" rx="8" fill="#FBBF24" opacity="0">
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.12;0.28"/>
+      <rect x="40" y="110" width="106" height="28" rx="8" fill="#1E293B"/>
+      <rect x="40" y="110" width="106" height="28" rx="8" fill="#FBBF24" opacity="0">
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.1;0.2"/>
       </rect>
-      <text x="102" y="129" fill="#CBD5E1">Request
-        <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.12;0.28"/>
+      <text x="93" y="129" fill="#CBD5E1">Request
+        <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.1;0.2"/>
       </text>
     </g>
     <g>
-      <rect x="176" y="110" width="124" height="28" rx="8" fill="#1E293B"/>
-      <rect x="176" y="110" width="124" height="28" rx="8" fill="#FBBF24" opacity="0">
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.28;0.44"/>
+      <rect x="154" y="110" width="106" height="28" rx="8" fill="#1E293B"/>
+      <rect x="154" y="110" width="106" height="28" rx="8" fill="#FBBF24" opacity="0">
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.2;0.32"/>
       </rect>
-      <text x="238" y="129" fill="#CBD5E1">Facts
-        <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.28;0.44"/>
+      <text x="207" y="129" fill="#CBD5E1">Legwork
+        <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.2;0.32"/>
       </text>
     </g>
     <g>
-      <rect x="312" y="110" width="124" height="28" rx="8" fill="#1E293B"/>
-      <rect x="312" y="110" width="124" height="28" rx="8" fill="#FBBF24" opacity="0">
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.6"/>
+      <rect x="268" y="110" width="106" height="28" rx="8" fill="#1E293B"/>
+      <rect x="268" y="110" width="106" height="28" rx="8" fill="#FBBF24" opacity="0">
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.32;0.44"/>
       </rect>
-      <text x="374" y="129" fill="#CBD5E1">Review
-        <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.44;0.6"/>
+      <text x="321" y="129" fill="#CBD5E1">Review
+        <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.32;0.44"/>
       </text>
     </g>
     <g>
-      <rect x="448" y="110" width="124" height="28" rx="8" fill="#1E293B"/>
-      <rect x="448" y="110" width="124" height="28" rx="8" fill="#FBBF24" opacity="0">
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.6;0.74"/>
+      <rect x="382" y="110" width="106" height="28" rx="8" fill="#1E293B"/>
+      <rect x="382" y="110" width="106" height="28" rx="8" fill="#FBBF24" opacity="0">
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.56"/>
       </rect>
-      <text x="510" y="129" fill="#CBD5E1">Challenge
-        <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.6;0.74"/>
+      <text x="435" y="129" fill="#CBD5E1">Challenge
+        <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.44;0.56"/>
       </text>
     </g>
     <g>
-      <rect x="584" y="110" width="136" height="28" rx="8" fill="#1E293B"/>
-      <rect x="584" y="110" width="136" height="28" rx="8" fill="#22C55E" opacity="0">
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.74"/>
+      <rect x="496" y="110" width="106" height="28" rx="8" fill="#1E293B"/>
+      <rect x="496" y="110" width="106" height="28" rx="8" fill="#FBBF24" opacity="0">
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.56;0.66"/>
       </rect>
-      <text x="652" y="129" fill="#CBD5E1">Posted
-        <animate attributeName="fill" dur="20s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#052E16" keyTimes="0;0.74"/>
+      <text x="549" y="129" fill="#CBD5E1">Checks
+        <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#0F172A;#86EFAC" keyTimes="0;0.56;0.66"/>
+      </text>
+    </g>
+    <g>
+      <rect x="610" y="110" width="110" height="28" rx="8" fill="#1E293B"/>
+      <rect x="610" y="110" width="110" height="28" rx="8" fill="#22C55E" opacity="0">
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.66;0.84"/>
+      </rect>
+      <text x="665" y="129" fill="#CBD5E1">Posted
+        <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#CBD5E1;#052E16;#86EFAC" keyTimes="0;0.66;0.84"/>
       </text>
     </g>
   </g>
@@ -93,13 +102,13 @@
 
   <!-- 0. the checks -->
   <g opacity="1" font-size="14">
-    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="1;0" keyTimes="0;0.12"/>
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="1;0" keyTimes="0;0.1"/>
     <text x="40" y="184" fill="#F1F5F9" font-size="17" font-weight="600">Checks run on timers. They cost nothing.</text>
     <g font-family="Consolas, Menlo, monospace" font-size="13">
       <text x="40" y="216" fill="#94A3B8">failing-ci       0 found  · no model run</text>
       <text x="40" y="240" fill="#94A3B8">assigned-issues  0 found  · no model run</text>
       <text x="40" y="264" fill="#FBBF24" opacity="0">pr-review        1 found  · starting one agent run
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.07"/>
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.06"/>
       </text>
     </g>
     <text x="40" y="304" fill="#94A3B8" font-size="13">A check is any command that prints JSON items. Yours can watch CI, issues, a queue, anything.</text>
@@ -107,7 +116,7 @@
 
   <!-- 1. the request -->
   <g opacity="0">
-    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.12;0.28"/>
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.1;0.2"/>
     <rect x="40" y="170" width="680" height="84" rx="10" fill="#0F172A" stroke="#334155"/>
     <circle cx="74" cy="212" r="18" fill="#7C3AED"/>
     <text x="74" y="218" fill="#FFFFFF" font-size="16" font-weight="bold" text-anchor="middle">M</text>
@@ -116,33 +125,33 @@
     <text x="40" y="290" fill="#94A3B8" font-size="13">Drafts, your own PRs, and heads already handled are skipped.</text>
   </g>
 
-  <!-- 2. facts -->
+  <!-- 2. legwork -->
   <g opacity="0" font-size="14">
-    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.28;0.44"/>
-    <text x="40" y="182" fill="#F1F5F9" font-size="16" font-weight="600">Facts</text>
-    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">legwork tier · a cheap model collects, no opinions</text>
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.2;0.32"/>
+    <text x="40" y="182" fill="#F1F5F9" font-size="16" font-weight="600">Legwork</text>
+    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">any tool, cheapest first · collects facts, no opinions</text>
     <rect x="40" y="196" width="680" height="8" rx="4" fill="#1E293B"/>
     <rect x="40" y="196" width="0" height="8" rx="4" fill="#FBBF24">
-      <animate attributeName="width" dur="20s" repeatCount="indefinite" values="0;0;680;680" keyTimes="0;0.29;0.42;1"/>
+      <animate attributeName="width" dur="25s" repeatCount="indefinite" values="0;0;680;680" keyTimes="0;0.21;0.31;1"/>
     </rect>
     <g fill="#CBD5E1">
       <text x="40" y="236" opacity="0">• cartTotal() has 2 callers: checkout.js:41, invoice.js:12
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.32"/>
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.23"/>
       </text>
-      <text x="40" y="262" opacity="0">• CI is green at the head
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.36"/>
+      <text x="40" y="262" opacity="0">• CI is green at the head; no open review threads
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.26"/>
       </text>
       <text x="40" y="288" opacity="0">• no other open PR touches src/cart
-        <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.4"/>
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.29"/>
       </text>
     </g>
   </g>
 
   <!-- 3. review -->
   <g opacity="0">
-    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.6"/>
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.32;0.44"/>
     <text x="40" y="182" fill="#F1F5F9" font-size="16" font-weight="600">Review</text>
-    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">review tier · a strong model drafts it</text>
+    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">a judge you trust drafts it</text>
     <rect x="40" y="194" width="400" height="104" rx="8" fill="#0B1220" stroke="#334155"/>
     <g font-family="Consolas, Menlo, monospace" font-size="12">
       <text x="54" y="216" fill="#86EFAC">+  for (const c of coupons) {</text>
@@ -152,7 +161,7 @@
       <text x="54" y="280" fill="#FCA5A5">   return subtotal - discount;</text>
     </g>
     <g opacity="0">
-      <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.5"/>
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.38"/>
       <rect x="456" y="194" width="264" height="104" rx="8" fill="#1E293B" stroke="#475569"/>
       <text x="470" y="218" fill="#F1F5F9" font-size="13">Two coupons worth more than</text>
       <text x="470" y="238" fill="#F1F5F9" font-size="13">the cart make this negative.</text>
@@ -163,25 +172,47 @@
 
   <!-- 4. challenge -->
   <g opacity="0" font-size="14">
-    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.6;0.74"/>
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.44;0.56"/>
     <text x="40" y="182" fill="#F1F5F9" font-size="16" font-weight="600">Challenge</text>
-    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">money is involved, so a second model tries to prove the draft wrong</text>
+    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">money is involved, so a second judge tries to prove the draft wrong</text>
     <rect x="40" y="196" width="680" height="34" rx="8" fill="#0B1220" stroke="#334155"/>
     <text x="54" y="218" fill="#CBD5E1">Claim: the cart total can go below zero (total.js:17)</text>
     <text x="40" y="262" fill="#94A3B8" opacity="1">trying to disprove it…
-      <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="1;0" keyTimes="0;0.67"/>
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="1;0" keyTimes="0;0.5"/>
     </text>
     <text x="40" y="262" fill="#86EFAC" opacity="0">✓ Could not disprove it: coupons of 30 and 30 on a 50 cart give −10.
-      <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.67"/>
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.5"/>
     </text>
-    <text x="40" y="290" fill="#FBBF24" opacity="0" font-size="13">Anchor check: one comment sat outside the diff, so it moved into the body.
-      <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.7"/>
+    <text x="40" y="292" fill="#94A3B8" opacity="0" font-size="13">Out of limit? The next tool takes it. No judge left? The run judges by itself.
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.52"/>
     </text>
   </g>
 
-  <!-- 5. posted, then the pop-up -->
+  <!-- 5. posting checks -->
+  <g opacity="0" font-size="13.5">
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.56;0.66"/>
+    <text x="40" y="182" fill="#F1F5F9" font-size="16" font-weight="600">Posting checks</text>
+    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">in code, not in a prompt</text>
+    <g fill="#CBD5E1">
+      <text x="40" y="212">✓ the head hasn't moved since the review</text>
+      <text x="40" y="236" opacity="0">✓ the inline comment sits inside GitHub's diff
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.575"/>
+      </text>
+      <text x="40" y="260" opacity="0">✓ important work, and the challenge is on file
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.59"/>
+      </text>
+      <text x="40" y="284" opacity="0">✓ short paragraphs, no dashes, @maya tagged by login
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.605"/>
+      </text>
+      <text x="40" y="308" opacity="0">✓ verdict rules: approve, with a red "Do not merge until"
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.62"/>
+      </text>
+    </g>
+  </g>
+
+  <!-- 6. posted, then the pop-up -->
   <g opacity="0">
-    <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.74"/>
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.66;0.84"/>
     <rect x="40" y="168" width="680" height="152" rx="10" fill="#0D1117" stroke="#30363D"/>
     <circle cx="62" cy="192" r="10" fill="#238636"/>
     <path d="M57 192 l4 4 l7 -8" stroke="#FFFFFF" stroke-width="2" fill="none"/>
@@ -189,25 +220,57 @@
     <rect x="56" y="214" width="3" height="54" fill="#DA3633"/>
     <text x="70" y="232" fill="#FF7B72" font-size="13" font-weight="600">⊘ Caution</text>
     <text x="70" y="256" fill="#E6EDF3" font-size="13" font-weight="600">Do not merge until the total can't go below zero.</text>
-    <text x="56" y="296" fill="#8B949E" font-size="13">Stacking coupons in one loop reads well, and both callers keep working.</text>
+    <text x="56" y="296" fill="#8B949E" font-size="13">@maya, stacking coupons in one loop reads well.</text>
 
     <g opacity="0">
-      <animate attributeName="opacity" dur="20s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.84"/>
-      <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite" values="0 -12;0 -12;0 0;0 0" keyTimes="0;0.84;0.87;1"/>
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.73"/>
+      <animateTransform attributeName="transform" type="translate" dur="25s" repeatCount="indefinite" values="0 -12;0 -12;0 0;0 0" keyTimes="0;0.73;0.755;1"/>
       <rect x="452" y="200" width="282" height="104" rx="6" fill="#F8FAFC" stroke="#CBD5E1"/>
       <rect x="452" y="200" width="282" height="26" rx="6" fill="#E2E8F0"/>
-      <text x="464" y="218" fill="#0F172A" font-size="12" font-weight="600">Reviewed: shop #42</text>
+      <text x="464" y="218" fill="#0F172A" font-size="12" font-weight="600">Reviewed: shop #42 (coupons stack)</text>
       <text x="722" y="218" fill="#475569" font-size="12" text-anchor="end">✕</text>
       <circle cx="476" cy="250" r="9" fill="#2563EB"/>
       <text x="476" y="254" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle">i</text>
       <text x="494" y="248" fill="#0F172A" font-size="12">approved, do not merge until</text>
       <text x="494" y="264" fill="#0F172A" font-size="12">the total can't go below zero.</text>
+      <text x="494" y="290" fill="#64748B" font-size="11">♪ chime</text>
       <rect x="664" y="274" width="58" height="22" rx="4" fill="#FFFFFF" stroke="#94A3B8"/>
       <text x="693" y="289" fill="#0F172A" font-size="12" text-anchor="middle">OK</text>
     </g>
   </g>
 
+  <!-- 7. a crash, healed by the guard -->
+  <g opacity="0">
+    <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.84"/>
+    <text x="40" y="182" fill="#F1F5F9" font-size="16" font-weight="600">A crash heals itself</text>
+    <text x="720" y="182" fill="#94A3B8" font-size="12" text-anchor="end">the guard restarts the core: 30 s, then longer, at most 5 min</text>
+    <rect x="40" y="194" width="680" height="84" rx="8" fill="#0B1220" stroke="#334155"/>
+    <g font-family="Consolas, Menlo, monospace" font-size="12.5">
+      <text x="54" y="216" fill="#FCA5A5">14:41:07  core stopped (exit 1)</text>
+      <text x="54" y="240" fill="#FBBF24" opacity="0">14:41:37  guard: starting the core again
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.89"/>
+      </text>
+      <text x="54" y="264" fill="#86EFAC" opacity="0">14:41:38  core started · checks resume, no run lost
+        <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.95"/>
+      </text>
+    </g>
+    <!-- the status line above the Claude Code prompt -->
+    <rect x="40" y="290" width="680" height="30" rx="6" fill="#0F172A" stroke="#334155"/>
+    <circle cx="58" cy="305" r="5" fill="#EF4444">
+      <animate attributeName="fill" dur="25s" repeatCount="indefinite" calcMode="discrete" values="#EF4444;#FBBF24;#22C55E" keyTimes="0;0.87;0.95"/>
+    </circle>
+    <text x="72" y="310" fill="#FCA5A5" font-size="12.5" font-family="Consolas, Menlo, monospace" opacity="1">deputy: STOPPED (last check 1m ago)
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="1;0" keyTimes="0;0.87"/>
+    </text>
+    <text x="72" y="310" fill="#FBBF24" font-size="12.5" font-family="Consolas, Menlo, monospace" opacity="0">deputy: restarting (the guard brings it back)
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1;0" keyTimes="0;0.87;0.95"/>
+    </text>
+    <text x="72" y="310" fill="#CBD5E1" font-size="12.5" font-family="Consolas, Menlo, monospace" opacity="0">deputy: idle, checked just now · last: <tspan fill="#60A5FA" text-decoration="underline">shop #42</tspan> (coupons stack) at 14:40
+      <animate attributeName="opacity" dur="25s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;0.95"/>
+    </text>
+  </g>
+
   <!-- the promise -->
   <circle cx="36" cy="370" r="5" fill="#22C55E"/>
-  <text x="50" y="375" fill="#CBD5E1" font-size="14">No model runs while nothing waits. New installs only draft; you post.</text>
+  <text x="50" y="375" fill="#CBD5E1" font-size="14">No model runs while nothing waits. Crashes heal themselves. New installs only draft.</text>
 </svg>
